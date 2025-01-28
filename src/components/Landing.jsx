@@ -397,19 +397,19 @@ const Landing = () => {
       <div className="relative bg-slate-800/30 py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-white mb-8">Join Our Growing Community</h2>
+            <h2 className="text-3xl font-bold text-white mb-8"> </h2>
             <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-500 mb-2">500+</div>
-                <p className="text-slate-300">Beta Users</p>
+                <div className="text-4xl font-bold text-blue-500 mb-2"></div>
+                <p className="text-slate-300"> </p>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-500 mb-2">1000+</div>
-                <p className="text-slate-300">Documents Analyzed</p>
+                <div className="text-4xl font-bold text-blue-500 mb-2"></div>
+                <p className="text-slate-300"> </p>
               </div>
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-500 mb-2">24/7</div>
-                <p className="text-slate-300">Support</p>
+                <div className="text-4xl font-bold text-blue-500 mb-2"></div>
+                <p className="text-slate-300"> </p>
               </div>
             </div>
           </div>
