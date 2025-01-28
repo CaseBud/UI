@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { chatApi } from '../utils/api';
 import { authService } from '../services/authService';
 
+const BASE_URL = 'http://case-bud-backend.vercel.app';
+
 const Chat = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -19,43 +21,64 @@ const Chat = () => {
   const [deletingChat, setDeletingChat] = useState(null);
   const [deletingDocument, setDeletingDocument] = useState(null);
 
-  // Add user initialization
+  // Replace the initialization effect
   useEffect(() => {
-    const user = authService.getCurrentUser();
-    const token = authService.getToken();
-    
-    if (!token || !user) {
-      navigate('/login');
-      return;
-    }
+    const initializeChat = async () => {
+      try {
+        // Check authentication
+        if (!authService.isAuthenticated()) {
+          handleLogout();
+          return;
+        }
 
-    setUser(user);
-    setMessages([{
-      type: 'assistant',
-      content: `Hello ${user?.fullName || 'there'}! I am CaseBud, your legal assistant. How can I help you today?`
-    }]);
-  }, [navigate]);
+        const currentUser = authService.getCurrentUser();
+        if (!currentUser) {
+          handleLogout();
+          return;
+        }
+
+        // Set user state
+        setUser(currentUser);
+
+        try {
+          // Try to fetch conversations first
+          await fetchConversations();
+          
+          // Initialize welcome message after successful fetch
+          setMessages([{
+            type: 'assistant',
+            content: `Hello ${currentUser.fullName}! I am CaseBud, your legal assistant. How can I help you today?`
+          }]);
+        } catch (error) {
+          console.error('Failed to fetch conversations:', error);
+          if (error.message === 'authentication_failed') {
+            handleLogout();
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Chat initialization failed:', error);
+        handleLogout();
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+
+    initializeChat();
+  }, []);
 
   const handleLogout = () => {
     authService.logout();
+    setUser(null);
+    setMessages([]);
+    setFiles([]);
+    setConversationId(null);
+    localStorage.removeItem('conversationId');
     navigate('/login');
   };
 
   // Use token directly from localStorage for API calls
   const token = localStorage.getItem('token');
-
-  useEffect(() => {
-    setMessages([{
-      type: 'assistant',
-      content: `Hello ${user?.fullName || 'there'}! I am CaseBud, your legal assistant. How can I help you today?`
-    }]);
-
-    // Retrieve conversation ID from localStorage if it exists
-    const storedConversationId = localStorage.getItem('conversationId');
-    if (storedConversationId) {
-      setConversationId(storedConversationId);
-    }
-  }, [user]);
 
   // Scroll to bottom when messages update
   useEffect(() => {
@@ -71,25 +94,14 @@ const Chat = () => {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('http://case-bud-backend.vercel.app/api/chat/conversations', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch conversations');
-      }
-
-      const data = await response.json();
+      const data = await chatApi.getConversations();
       setConversations(data.conversations || []);
     } catch (error) {
-      if (error.message.includes('token') || error.message.includes('unauthorized')) {
+      console.error('Failed to fetch conversations:', error);
+      if (error.status === 401) {
         handleLogout();
       }
-      console.error('Failed to fetch conversations:', error);
-    } finally {
-      setLoadingHistory(false);
+      throw error;
     }
   };
 
@@ -133,7 +145,7 @@ const Chat = () => {
         formData.append('file', file);
         formData.append('name', file.name);
 
-        const response = await fetch('http://case-bud-backend.vercel.app/api/documents', {
+        const response = await fetch(`${BASE_URL}/documents`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -189,29 +201,16 @@ const Chat = () => {
       setIsAnalyzing(true);
       setMessages(prev => [...prev, { type: 'user', content }]);
 
-      const response = await fetch('https://case-bud-backend.onrender.com/api/chat', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: content,
-          documentIds: files.length > 0 ? files.map(file => file.id) : [],
-          conversationId: conversationId || undefined
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to send message');
-      }
-
-      const data = await response.json();
+      const data = await chatApi.sendMessage(
+        content,
+        files.length > 0 ? files.map(f => f.id) : null,
+        conversationId
+      );
 
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId);
-        localStorage.setItem('conversationId', data.conversationId);
+        // Fetch updated conversation list
+        fetchConversations();
       }
 
       setMessages(prev => [...prev, {
@@ -222,12 +221,12 @@ const Chat = () => {
       setMessage('');
     } catch (error) {
       console.error('Chat error:', error);
-      if (error.message.includes('token') || error.message.includes('unauthorized')) {
+      if (error.status === 401) {
         handleLogout();
       } else {
         setMessages(prev => [...prev, {
           type: 'error',
-          content: 'Network error. Please try again.'
+          content: 'Failed to send message. Please try again.'
         }]);
       }
     } finally {
@@ -241,16 +240,34 @@ const Chat = () => {
   };
 
   const handleKeyPress = (e) => {
+    if (authService.isAuthenticated()) {
+      authService.updateActivity();
+    }
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
     }
   };
 
-  const handleConversationSelect = (conversation) => {
-    setSelectedConversation(conversation);
-    setConversationId(conversation.id);
-    // Load conversation messages here if needed
+  const handleConversationSelect = async (conversation) => {
+    try {
+      setSelectedConversation(conversation);
+      setConversationId(conversation.id);
+      
+      // Fetch conversation history
+      const data = await chatApi.getConversation(conversation.id);
+      if (data.messages) {
+        setMessages(data.messages.map(msg => ({
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.content
+        })));
+      }
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      if (error.status === 401) {
+        handleLogout();
+      }
+    }
   };
 
   const startNewChat = () => {
@@ -269,7 +286,7 @@ const Chat = () => {
         return;
       }
 
-      const response = await fetch(`https://case-bud-backend.onrender.com/api/chat/${conversationId}`, {
+      const response = await fetch(`${BASE_URL}/chat/${conversationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -299,7 +316,7 @@ const Chat = () => {
         return;
       }
 
-      const response = await fetch(`https://case-bud-backend.onrender.com/api/documents/${documentId}`, {
+      const response = await fetch(`${BASE_URL}/documents/${documentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -325,8 +342,59 @@ const Chat = () => {
     }
   };
 
+  const handleEditTitle = async (conversationId, newTitle) => {
+    try {
+      await chatApi.updateConversationTitle(conversationId, newTitle);
+      // Update conversations list
+      fetchConversations();
+    } catch (error) {
+      console.error('Failed to update title:', error);
+      if (error.status === 401) {
+        handleLogout();
+      }
+    }
+  };
+
+  // Add effect to restore pending message after login
+  useEffect(() => {
+    const pendingMessage = localStorage.getItem('pendingMessage');
+    if (pendingMessage && user) {
+      setMessage(pendingMessage);
+      localStorage.removeItem('pendingMessage');
+    }
+  }, [user]);
+
+  // Add session check interval
+  useEffect(() => {
+    // Check auth status immediately
+    if (!authService.isAuthenticated()) {
+      handleLogout();
+      return;
+    }
+
+    // Set up periodic session checks
+    const sessionCheckInterval = setInterval(() => {
+      if (!authService.isAuthenticated()) {
+        handleLogout();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(sessionCheckInterval);
+  }, []);
+
+  // Add activity tracking to user interactions
+  const handleUserActivity = () => {
+    if (authService.isAuthenticated()) {
+      authService.updateActivity();
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800">
+    <div 
+      className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800"
+      onClick={handleUserActivity}
+      onKeyPress={handleUserActivity}
+    >
       {/* Sidebar */}
       <div className="w-80 flex-shrink-0 border-r border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
         <div className="flex h-full flex-col">

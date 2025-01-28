@@ -10,12 +10,12 @@ export class ApiError extends Error {
 }
 
 export const fetchWithToken = async (endpoint, options = {}) => {
-  const token = authService.getToken();
-  
-  if (!token) {
-    throw new Error('No authentication token');
+  if (!authService.isAuthenticated()) {
+    throw new ApiError('Authentication required', 401);
   }
 
+  const token = authService.getToken();
+  
   const defaultHeaders = {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`,
@@ -33,13 +33,16 @@ export const fetchWithToken = async (endpoint, options = {}) => {
     if (response.status === 401) {
       authService.logout();
       window.location.href = '/login';
-      throw new Error('Session expired');
+      throw new ApiError('Session expired', 401);
     }
 
     return handleResponse(response);
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError('Network error', 0);
+    if (error.status === 401) {
+      authService.logout();
+      window.location.href = '/login';
+    }
+    throw error;
   }
 };
 
@@ -57,24 +60,41 @@ const handleResponse = async (response) => {
 };
 
 export const chatApi = {
-  sendMessage: (content, documentIds = null) => {
-    const endpoint = documentIds ? '/chat/document-analysis' : '/chat/standard-conversation';
+  sendMessage: (content, documentIds = null, conversationId = null) => {
+    // Choose endpoint based on whether it's document analysis or standard chat
+    const endpoint = documentIds ? '/api/chat/document-analysis' : '/api/chat/standard-conversation';
+    
+    // Prepare request body based on chat type
+    const body = documentIds ? {
+      query: content,
+      documentIds,
+      conversationId
+    } : {
+      query: content,
+      conversationId
+    };
+
     return fetchWithToken(endpoint, {
       method: 'POST',
-      body: JSON.stringify(documentIds ? {
-        message: content,
-        documentIds
-      } : {
-        query: content
-      })
+      body: JSON.stringify(body)
     });
   },
 
-  getConversations: () => fetchWithToken('/chat/'),
+  getConversations: () => fetchWithToken('/api/chat/'),
 
-  deleteConversation: (id) => fetchWithToken(`/chat/${id}`, {
-    method: 'DELETE'
-  }),
+  getConversation: (conversationId) => 
+    fetchWithToken(`/api/chat/${conversationId}/`),
+
+  deleteConversation: (conversationId) => 
+    fetchWithToken(`/api/chat/${conversationId}`, {
+      method: 'DELETE'
+    }),
+
+  updateConversationTitle: (conversationId, title) => 
+    fetchWithToken(`/api/chat/${conversationId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title })
+    }),
 
   uploadDocument: async (file) => {
     const formData = new FormData();
@@ -98,7 +118,7 @@ export const chatApi = {
 
 export const api = {
   login: async (credentials) => {
-    const response = await fetch(`${BASE_URL}/auth/login`, {
+    const response = await fetch(`${BASE_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
