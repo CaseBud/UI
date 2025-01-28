@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { authService } from '../services/authService';
 
 const Login = () => {
   const navigate = useNavigate()
@@ -19,42 +20,39 @@ const Login = () => {
     setError('');
     setSuccess(false);
 
-    const loginData = {
-      email: credentials.email.trim(),
-      password: credentials.password
-    };
-
-    console.log('Attempting login with:', loginData); // Debug log
-
     try {
-      const response = await fetch('https://case-bud-backend.onrender.com/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(loginData)
+      console.log('Submitting login form with email:', credentials.email);
+      
+      const response = await authService.login({
+        email: credentials.email.trim(),
+        password: credentials.password
       });
 
-      const data = await response.json();
-      console.log('Server response:', data); // Debug log
+      console.log('Login response received:', { 
+        success: !!response.token,
+        user: response.user ? 'present' : 'missing'
+      });
 
-      if (response.ok) {
-        // Store auth data
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user || {}));
-        
-        console.log('Login successful, stored token and user data'); // Debug log
+      if (response && response.token) {
         setSuccess(true);
-
-        // Immediate navigation
-        navigate('/chat');
+        setTimeout(() => {
+          navigate('/chat', { replace: true });
+        }, 100);
       } else {
-        console.error('Login failed:', data); // Debug log
-        throw new Error(data.message || 'Invalid credentials');
+        throw new Error('Invalid response from server');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error details:', {
+        message: err.message,
+        status: err.status,
+        stack: err.stack
+      });
+      setError(
+        err.message === 'Invalid server response' 
+          ? 'Server error occurred. Please try again later.'
+          : err.message || 'Login failed. Please check your credentials and try again.'
+      );
+      authService.logout();
     } finally {
       setIsLoading(false);
     }

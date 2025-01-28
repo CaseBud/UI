@@ -1,30 +1,23 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import ResetPassword from './components/ResetPassword';
-import Login from './components/Login';
-import Register from './components/Register';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Chat from './components/Chat';
-import VerifyOTP from './components/VerifyOTP';
+import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
-import Landing from './components/Landing';
 
-function App() {
+const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/verify-otp" element={<VerifyOTP />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/chat" element={
           <ProtectedRoute>
             <Chat />
           </ProtectedRoute>
         } />
+        <Route path="*" element={<Navigate to="/chat" replace />} />
       </Routes>
     </BrowserRouter>
   );
-}
+};
 
 export default App;

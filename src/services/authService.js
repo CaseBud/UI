@@ -1,32 +1,79 @@
-const BASE_URL = 'http://case-bud-backend.vercel.app';
+import { setAuthToken, checkToken } from '../utils/auth';
+
+const BASE_URL = 'https://case-bud-backend.vercel.app';
+
+const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 export const authService = {
   login: async (credentials) => {
-    const response = await fetch(`${BASE_URL}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(credentials)
-    });
+    try {
+      console.log('Attempting login with:', {
+        url: `${BASE_URL}/api/auth/login`,
+        credentials: { email: credentials.email, password: '***' }
+      });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
+      const response = await fetch(`${BASE_URL}/api/auth/login`, { // Update endpoint path to match backend
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': window.location.origin,
+        },
+        mode: 'cors',
+        credentials: 'omit', // Change from 'include' to 'omit' since we're using token-based auth
+        body: JSON.stringify({
+          email: credentials.email,
+          password: credentials.password
+        })
+      });
+
+      const responseText = await response.text();
+      console.log('Raw response:', responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('Failed to parse response:', e);
+        throw new Error('Invalid server response');
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || `Login failed with status ${response.status}`);
+      }
+
+      // Extract token and user from nested response
+      const token = data.data?.token;
+      const user = data.data?.user;
+
+      if (!token) {
+        throw new Error('No authentication token received');
+      }
+
+      // Store auth data
+      setAuthToken(token);
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('lastActivity', Date.now().toString());
+
+      return {
+        token,
+        user
+      };
+    } catch (error) {
+      console.error('Login error:', {
+        message: error.message,
+        stack: error.stack
+      });
+      // Cleanup on error
+      setAuthToken(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('lastActivity');
+      throw error;
     }
-
-    // Store auth data
-    if (data.token) {
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user || {}));
-    }
-
-    return data;
   },
 
   register: async (userData) => {
-    const response = await fetch(`${BASE_URL}/signup`, {
+    const response = await fetch(`${BASE_URL}/api/auth/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,7 +91,7 @@ export const authService = {
   },
 
   verifyEmail: async (verificationData) => {
-    const response = await fetch(`${BASE_URL}/verify-email`, {
+    const response = await fetch(`${BASE_URL}/api/auth/verify-email`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,26 +108,70 @@ export const authService = {
     return data;
   },
 
+  resendVerification: async (email) => {
+    const response = await fetch(`${BASE_URL}/api/auth/resend-verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to resend verification');
+    }
+    return data;
+  },
+
+  forgotPassword: async (email) => {
+    const response = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to initiate password reset');
+    }
+    return data;
+  },
+
+  resetPassword: async (resetData) => {
+    const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(resetData)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Password reset failed');
+    }
+    return data;
+  },
+
   logout: () => {
-    localStorage.removeItem('token');
+    setAuthToken(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('conversationId');
   },
 
   getCurrentUser: () => {
     try {
-      const user = localStorage.getItem('user');
-      return user ? JSON.parse(user) : null;
-    } catch (error) {
+      return JSON.parse(localStorage.getItem('user'));
+    } catch {
       return null;
     }
   },
 
-  getToken: () => {
-    return localStorage.getItem('token');
-  },
+  getToken: () => getAuthToken(),
 
-  isAuthenticated: () => {
-    return !!localStorage.getItem('token');
-  }
+  isAuthenticated: () => checkToken(),
+
+  updateActivity: () => {}
 };

@@ -1,3 +1,4 @@
+const BASE_URL = 'https://case-bud-backend.vercel.app';
 const TOKEN_REFRESH_URL = 'https://case-bud-backend.onrender.com/api/auth/refresh';
 
 export const refreshToken = async () => {
@@ -33,3 +34,46 @@ export const isTokenExpired = (token) => {
     return true;
   }
 };
+
+export const checkLoginStatus = () => {
+  const token = localStorage.getItem('token');
+  const user = localStorage.getItem('user');
+  
+  if (token && user) {
+    try {
+      return {
+        isLoggedIn: true,
+        user: JSON.parse(user),
+        token
+      };
+    } catch (e) {
+      console.error('Failed to parse stored user data');
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+    }
+  }
+  
+  return { isLoggedIn: false };
+};
+
+export const checkToken = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.exp * 1000 > Date.now();
+  } catch (e) {
+    return false;
+  }
+};
+
+export const setAuthToken = (token) => {
+  if (token) {
+    localStorage.setItem('token', token);
+  } else {
+    localStorage.removeItem('token');
+  }
+};
+
+export const getAuthToken = () => localStorage.getItem('token');

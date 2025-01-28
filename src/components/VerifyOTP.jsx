@@ -77,8 +77,14 @@ const VerifyOTP = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Store authentication data immediately
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user || {}));
+        }
         localStorage.removeItem('pendingVerificationEmail');
-        navigate('/chat');
+        // Navigate directly to chat
+        navigate('/chat', { replace: true });
       } else {
         setError(data.message || 'Invalid OTP. Please try again.');
       }
