@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { chatApi } from '../utils/api';
+import { authService } from '../services/authService';
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -20,28 +21,23 @@ const Chat = () => {
 
   // Add user initialization
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
+    const user = authService.getCurrentUser();
+    const token = authService.getToken();
     
-    if (!token) {
+    if (!token || !user) {
       navigate('/login');
       return;
     }
 
-    if (userStr) {
-      try {
-        const userData = JSON.parse(userStr);
-        setUser(userData);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-        navigate('/login');
-      }
-    }
+    setUser(user);
+    setMessages([{
+      type: 'assistant',
+      content: `Hello ${user?.fullName || 'there'}! I am CaseBud, your legal assistant. How can I help you today?`
+    }]);
   }, [navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    authService.logout();
     navigate('/login');
   };
 
@@ -127,7 +123,7 @@ const Chat = () => {
         formData.append('file', file);
         formData.append('name', file.name);
 
-        const response = await fetch('https://case-bud-backend.onrender.com/api/documents', {
+        const response = await fetch('http://case-bud-backend.vercel.app/api/documents', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

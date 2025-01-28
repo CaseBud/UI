@@ -1,6 +1,6 @@
-import { refreshToken } from './auth';
+import { authService } from '../services/authService';
 
-const BASE_URL = 'https://case-bud-backend.onrender.com/api';
+const BASE_URL = 'http://case-bud-backend.vercel.app';
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -10,11 +10,15 @@ export class ApiError extends Error {
 }
 
 export const fetchWithToken = async (endpoint, options = {}) => {
-  const token = localStorage.getItem('token');
+  const token = authService.getToken();
   
+  if (!token) {
+    throw new Error('No authentication token');
+  }
+
   const defaultHeaders = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'Authorization': `Bearer ${token}`,
   };
 
   try {
@@ -27,31 +31,15 @@ export const fetchWithToken = async (endpoint, options = {}) => {
     });
 
     if (response.status === 401) {
-      // Token expired
-      try {
-        const newToken = await refreshToken();
-        // Retry the original request with new token
-        const retryResponse = await fetch(`${BASE_URL}${endpoint}`, {
-          ...options,
-          headers: {
-            ...defaultHeaders,
-            Authorization: `Bearer ${newToken}`,
-            ...options.headers,
-          },
-        });
-        return handleResponse(retryResponse);
-      } catch (error) {
-        // Refresh token failed
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-        throw new ApiError('Session expired. Please login again.', 401);
-      }
+      authService.logout();
+      window.location.href = '/login';
+      throw new Error('Session expired');
     }
 
     return handleResponse(response);
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError('Network error. Please check your connection.', 0);
+    throw new ApiError('Network error', 0);
   }
 };
 
