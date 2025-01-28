@@ -71,10 +71,20 @@ const Chat = () => {
 
   const fetchConversations = async () => {
     try {
-      const data = await chatApi.getConversations();
-      setConversations(data.conversations);
+      const response = await fetch('http://case-bud-backend.vercel.app/api/chat/conversations', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch conversations');
+      }
+
+      const data = await response.json();
+      setConversations(data.conversations || []);
     } catch (error) {
-      if (error.status === 401) {
+      if (error.message.includes('token') || error.message.includes('unauthorized')) {
         handleLogout();
       }
       console.error('Failed to fetch conversations:', error);
@@ -179,10 +189,25 @@ const Chat = () => {
       setIsAnalyzing(true);
       setMessages(prev => [...prev, { type: 'user', content }]);
 
-      const data = await chatApi.sendMessage(
-        content,
-        files.length > 0 ? files.map(file => file.id) : null
-      );
+      const response = await fetch('https://case-bud-backend.onrender.com/api/chat', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: content,
+          documentIds: files.length > 0 ? files.map(file => file.id) : [],
+          conversationId: conversationId || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to send message');
+      }
+
+      const data = await response.json();
 
       if (data.conversationId && !conversationId) {
         setConversationId(data.conversationId);
@@ -196,12 +221,13 @@ const Chat = () => {
       
       setMessage('');
     } catch (error) {
-      if (error.status === 401) {
+      console.error('Chat error:', error);
+      if (error.message.includes('token') || error.message.includes('unauthorized')) {
         handleLogout();
       } else {
         setMessages(prev => [...prev, {
           type: 'error',
-          content: error.message
+          content: 'Network error. Please try again.'
         }]);
       }
     } finally {
