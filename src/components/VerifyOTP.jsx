@@ -1,66 +1,66 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 
 const VerifyOTP = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [otp, setOtp] = useState('')
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [countdown, setCountdown] = useState(30)
-  const [canResend, setCanResend] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [otp, setOtp] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [countdown, setCountdown] = useState(30);
+  const [canResend, setCanResend] = useState(false);
 
   // Get email from navigation state or localStorage
-  const email = location.state?.email || localStorage.getItem('pendingVerificationEmail')
+  const email = location.state?.email || localStorage.getItem('pendingVerificationEmail');
 
   useEffect(() => {
     if (!email) {
-      navigate('/register')
+      navigate('/register');
     }
 
     // Countdown timer
-    let timer
+    let timer;
     if (countdown > 0) {
       timer = setInterval(() => {
         setCountdown(prev => {
           if (prev <= 1) {
-            setCanResend(true)
-            return 0
+            setCanResend(true);
+            return 0;
           }
-          return prev - 1
-        })
-      }, 1000)
+          return prev - 1;
+        });
+      }, 1000);
     }
 
-    return () => clearInterval(timer)
-  }, [countdown, email, navigate])
+    return () => clearInterval(timer);
+  }, [countdown, email, navigate]);
 
   const handleOtpChange = (e) => {
-    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6)
-    setOtp(value)
+    const value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+    setOtp(value);
     
     // Auto-submit when 6 digits are entered
     if (value.length === 6) {
-      handleSubmit(e, value)
+      handleSubmit(e, value);
     }
-  }
+  };
 
   const handleSubmit = async (e, autoOtp = null) => {
-    e?.preventDefault()
-    const otpToSubmit = autoOtp || otp
+    e?.preventDefault();
+    const otpToSubmit = autoOtp || otp;
 
     if (!email) {
-      setError('Email not found. Please register again.')
-      return
+      setError('Email not found. Please register again.');
+      return;
     }
 
     if (!otpToSubmit || otpToSubmit.length !== 6) {
-      setError('Please enter a valid 6-digit OTP')
-      return
+      setError('Please enter a valid 6-digit OTP');
+      return;
     }
 
-    setIsLoading(true)
-    setError('')
+    setIsLoading(true);
+    setError('');
 
     try {
       const response = await fetch('https://case-bud-backend.onrender.com/api/auth/verify-email', {
@@ -72,48 +72,46 @@ const VerifyOTP = () => {
           email,
           otp: otpToSubmit
         })
-      })
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (response.ok) {
-        localStorage.removeItem('pendingVerificationEmail')
-        navigate('/chat')
+        localStorage.removeItem('pendingVerificationEmail');
+        navigate('/chat');
       } else {
-        setError(data.message || 'Invalid OTP. Please try again.')
+        setError(data.message || 'Invalid OTP. Please try again.');
       }
     } catch (err) {
-      setError('Network error. Please check your connection and try again.')
+      setError('Network error. Please check your connection and try again.');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleResendOtp = async () => {
-    if (!canResend) return
+    if (!canResend) return;
 
     try {
-
-      //!Add  resend OTP API endpoint here
       const response = await fetch('https://case-bud-backend.onrender.com/api/auth/resend-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email })
-      })
+      });
 
       if (response.ok) {
-        setCountdown(30)
-        setCanResend(false)
+        setCountdown(30);
+        setCanResend(false);
       } else {
-        const data = await response.json()
-        setError(data.message || 'Failed to resend OTP')
+        const data = await response.json();
+        setError(data.message || 'Failed to resend OTP');
       }
     } catch (err) {
-      setError('Network error. Please try again.')
+      setError('Network error. Please try again.');
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex bg-slate-900">

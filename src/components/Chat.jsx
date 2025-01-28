@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { chatApi } from '../utils/api';
 
 const Chat = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [message, setMessage] = useState('');
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -15,7 +17,27 @@ const Chat = () => {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [deletingChat, setDeletingChat] = useState(null);
   const [deletingDocument, setDeletingDocument] = useState(null);
-  const navigate = useNavigate();
+
+  // Add user initialization
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    if (userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        setUser(userData);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        navigate('/login');
+      }
+    }
+  }, [navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');

@@ -1,15 +1,15 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Register = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
     password: '',
     confirmPassword: ''
-  })
-  const [error, setError] = useState('')
+  });
+  const [error, setError] = useState('');
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +24,7 @@ const Register = () => {
   };
 
   const validateField = (name, value) => {
-    const errors = {...validationErrors};
+    const errors = { ...validationErrors };
     
     switch (name) {
       case 'email':
@@ -267,7 +267,7 @@ const Register = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Register
+export default Register;

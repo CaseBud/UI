@@ -8,53 +8,65 @@ const Login = () => {
     password: ''
   })
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [isHovered, setIsHovered] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-    
     setIsLoading(true);
     setError('');
-    setSuccess(false);
 
+    // Format credentials properly
     const loginData = {
-      email: credentials.email.trim(),
+      email: credentials.email.trim().toLowerCase(),
       password: credentials.password
     };
 
-    console.log('Attempting login with:', loginData); // Debug log
+    console.log('Attempting login with:', { email: loginData.email }); // Debug log
 
     try {
       const response = await fetch('https://case-bud-backend.onrender.com/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Access-Control-Allow-Origin': '*'
         },
-        body: JSON.stringify(loginData)
+        body: JSON.stringify(loginData),
+        credentials: 'include'
       });
 
+      // Log the full response for debugging
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers));
+      
       const data = await response.json();
-      console.log('Server response:', data); // Debug log
+      console.log('Login response data:', {
+        status: response.status,
+        ok: response.ok,
+        data: { ...data, token: data.token ? 'exists' : 'missing' }
+      });
 
-      if (response.ok) {
-        // Store auth data
-        localStorage.setItem('token', data.token);
+      if (response.ok && data.token) {
+        // Ensure proper token format
+        const token = data.token.startsWith('Bearer ') ? data.token : `Bearer ${data.token}`;
+        localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(data.user || {}));
-        
-        console.log('Login successful, stored token and user data'); // Debug log
-        setSuccess(true);
-
-        // Immediate navigation
-        navigate('/chat');
+        console.log('Login successful, redirecting to chat...');
+        navigate('/chat', { replace: true });
       } else {
-        console.error('Login failed:', data); // Debug log
-        throw new Error(data.message || 'Invalid credentials');
+        let errorMsg = data.message || data.error || 'Invalid credentials';
+        if (response.status === 401) {
+          errorMsg = 'Email or password is incorrect. Please try again.';
+        } else if (response.status === 404) {
+          errorMsg = 'Account not found. Please register first.';
+        }
+        console.error('Login failed:', errorMsg);
+        setError(errorMsg);
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please try again.');
+      setError('Network error. Please try again later.');
     } finally {
       setIsLoading(false);
     }
@@ -65,23 +77,17 @@ const Login = () => {
       setError('Please fill in all fields');
       return false;
     }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(credentials.email)) {
+    if (!credentials.email.includes('@')) {
       setError('Please enter a valid email address');
       return false;
     }
-    
     return true;
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setCredentials(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    if (error) setError('');
+  // Add social login handlers
+  const handleSocialLogin = (provider) => {
+    console.log(`Logging in with ${provider}`);
+    // Implement social login logic here
   };
 
   return (
@@ -139,28 +145,41 @@ const Login = () => {
             </div>
           )}
 
-          {success && (
-            <div className="animate-fadeIn rounded-lg bg-green-500/10 p-4 text-sm text-green-400 border border-green-500/20">
-              <div className="flex items-center">
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                </svg>
-                Login successful! Redirecting to chat...
+          <div className="flex flex-col space-y-4">
+            <button
+              onClick={() => handleSocialLogin('google')}
+              className="flex items-center justify-center px-4 py-3 border border-slate-600 rounded-lg hover:bg-slate-800/50 transition-all duration-200"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+              </svg>
+              Continue with Google
+            </button>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-600"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-900 text-slate-400">Or continue with</span>
               </div>
             </div>
-          )}
+          </div>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            if (validateForm()) {
+              handleSubmit(e);
+            }
+          }} className="mt-8 space-y-6">
             <div className="space-y-5">
               <div className="relative">
                 <input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder=" "
                   className="peer w-full px-4 py-3 rounded-lg border border-slate-600 bg-slate-800/50 text-white placeholder-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                  onChange={handleInputChange}
-                  value={credentials.email}
+                  onChange={(e) => setCredentials({...credentials, email: e.target.value})}
                   required
                 />
                 <label 
@@ -175,12 +194,10 @@ const Login = () => {
               <div className="relative">
                 <input
                   id="password"
-                  name="password"
                   type="password"
                   placeholder=" "
                   className="peer w-full px-4 py-3 rounded-lg border border-slate-600 bg-slate-800/50 text-white placeholder-transparent focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                  onChange={handleInputChange}
-                  value={credentials.password}
+                  onChange={(e) => setCredentials({...credentials, password: e.target.value})}
                   required
                 />
                 <label 
@@ -192,6 +209,25 @@ const Login = () => {
                   Password
                 </label>
               </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500/20"
+                />
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-slate-400">
+                  Remember me
+                </label>
+              </div>
+              <Link 
+                to="/reset-password" 
+                className="text-sm text-blue-400 hover:text-blue-300 transition-colors duration-200"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             <button

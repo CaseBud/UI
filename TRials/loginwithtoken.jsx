@@ -8,7 +8,6 @@ const Login = () => {
     password: ''
   })
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleSubmit = async (e) => {
@@ -17,14 +16,12 @@ const Login = () => {
     
     setIsLoading(true);
     setError('');
-    setSuccess(false);
 
+    // Simplified request body matching the exact format required
     const loginData = {
-      email: credentials.email.trim(),
+      email: credentials.email,
       password: credentials.password
     };
-
-    console.log('Attempting login with:', loginData); // Debug log
 
     try {
       const response = await fetch('https://case-bud-backend.onrender.com/api/auth/login', {
@@ -36,21 +33,17 @@ const Login = () => {
       });
 
       const data = await response.json();
-      console.log('Server response:', data); // Debug log
 
-      if (response.ok) {
-        // Store auth data
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      if (data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user || {}));
-        
-        console.log('Login successful, stored token and user data'); // Debug log
-        setSuccess(true);
-
-        // Immediate navigation
         navigate('/chat');
       } else {
-        console.error('Login failed:', data); // Debug log
-        throw new Error(data.message || 'Invalid credentials');
+        throw new Error('Authentication failed');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -61,14 +54,10 @@ const Login = () => {
   };
 
   const validateForm = () => {
+    setError('');
+    
     if (!credentials.email || !credentials.password) {
       setError('Please fill in all fields');
-      return false;
-    }
-    
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(credentials.email)) {
-      setError('Please enter a valid email address');
       return false;
     }
     
@@ -106,16 +95,6 @@ const Login = () => {
             <p className="mt-4 text-lg text-blue-100">
               Streamline your workflow and enhance your legal research with cutting-edge AI technology.
             </p>
-            <div className="mt-8 grid grid-cols-2 gap-4">
-              <div className="bg-blue-900/20 backdrop-blur-sm p-4 rounded-lg">
-                <h3 className="text-white font-semibold">Smart Research</h3>
-                <p className="text-blue-100 text-sm mt-1">Intelligent legal document analysis</p>
-              </div>
-              <div className="bg-blue-900/20 backdrop-blur-sm p-4 rounded-lg">
-                <h3 className="text-white font-semibold">24/7 Available</h3>
-                <p className="text-blue-100 text-sm mt-1">Access assistance anytime</p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -135,17 +114,6 @@ const Login = () => {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
                 </svg>
                 {error}
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="animate-fadeIn rounded-lg bg-green-500/10 p-4 text-sm text-green-400 border border-green-500/20">
-              <div className="flex items-center">
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                </svg>
-                Login successful! Redirecting to chat...
               </div>
             </div>
           )}
