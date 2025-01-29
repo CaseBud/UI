@@ -1,7 +1,17 @@
 import React from 'react';
 import { GiScales, GiHandcuffs, GiHouse, GiPublicSpeaker } from 'react-icons/gi';
+import { FiLogOut } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 const Sidebar = ({ user, onSelectPrompt }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div className="hidden md:flex w-64 flex-shrink-0 border-r border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
       <div className="flex flex-col w-full">
@@ -67,20 +77,29 @@ const Sidebar = ({ user, onSelectPrompt }) => {
 
         {/* User Profile */}
         <div className="p-4 border-t border-slate-700/50">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
-              <span className="text-sm font-medium text-white">
-                {user?.fullName?.[0]?.toUpperCase() || 'U'}
-              </span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
+                  {user?.fullName?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">
+                  {user?.fullName || 'User'}
+                </p>
+                <p className="text-xs text-slate-400 truncate">
+                  {user?.email || 'user@example.com'}
+                </p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {user?.fullName || 'User'}
-              </p>
-              <p className="text-xs text-slate-400 truncate">
-                {user?.email || 'user@example.com'}
-              </p>
-            </div>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50 transition-colors"
+              title="Logout"
+            >
+              <FiLogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>

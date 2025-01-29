@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { chatApi } from '../utils/api';
 import { authService } from '../services/authService';
 import Sidebar from './Sidebar';  // Update import statement
+import ChatHistory from './ChatHistory';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -37,6 +38,9 @@ const Chat = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
 
   const user = authService.getCurrentUser();
 
@@ -55,6 +59,75 @@ const Chat = () => {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  const fetchConversations = async () => {
+    try {
+      const response = await fetch('https://case-bud-backend.onrender.com/api/chat/', {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      });
+      const data = await response.json();
+      setConversations(data);
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+    }
+  };
+
+  const handleSelectChat = async (chatId) => {
+    try {
+      const response = await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}/`, {
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      });
+      const data = await response.json();
+      setMessages(data.messages);
+      setCurrentChatId(chatId);
+    } catch (error) {
+      console.error('Failed to fetch chat:', error);
+    }
+  };
+
+  const handleDeleteChat = async (chatId) => {
+    try {
+      await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`
+        }
+      });
+      setConversations(prev => prev.filter(chat => chat.id !== chatId));
+      if (currentChatId === chatId) {
+        setMessages([]);
+        setCurrentChatId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+    }
+  };
+
+  const handleEditTitle = async (chatId, newTitle) => {
+    try {
+      await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${authService.getToken()}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title: newTitle })
+      });
+      setConversations(prev => prev.map(chat => 
+        chat.id === chatId ? { ...chat, title: newTitle } : chat
+      ));
+    } catch (error) {
+      console.error('Failed to update chat title:', error);
+    }
+  };
 
   const sendMessage = async (content) => {
     if (!content.trim() || isAnalyzing) return;
@@ -101,6 +174,50 @@ const Chat = () => {
     setMessage(promptText);
     inputRef.current?.focus();
   };
+
+  const createNewChat = async () => {
+    try {
+      // First, save the current chat if it exists and has messages
+      if (messages.length > 1) { // More than just the initial greeting
+        const title = messages[1].content.slice(0, 40) + '...'; // Use first user message as title
+        const response = await fetch('https://case-bud-backend.onrender.com/api/chat/', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authService.getToken()}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            title,
+            messages: messages
+          })
+        });
+        
+        if (response.ok) {
+          // Refresh conversations list to show the new chat
+          fetchConversations();
+        }
+      }
+
+      // Reset current chat state
+      setMessages([{
+        type: 'assistant',
+        content: 'Hello! How can I help you today?',
+        timestamp: new Date()
+      }]);
+      setCurrentChatId(null);
+      setMessage('');
+      
+      // Optional: Close the history sidebar on mobile
+      if (window.innerWidth < 768) {
+        setIsHistoryOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to create new chat:', error);
+    }
+  };
+
+  // Replace the existing handleNewChat with createNewChat
+  const handleNewChat = createNewChat;
 
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
@@ -159,6 +276,14 @@ const Chat = () => {
               <p className="text-sm text-slate-400">AI-powered legal research and analysis</p>
             </div>
           </div>
+          <button
+            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+            className="ml-4 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
+          >
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+            </svg>
+          </button>
         </div>
 
         {/* Messages */}
@@ -217,6 +342,16 @@ const Chat = () => {
           </form>
         </div>
       </div>
+      <ChatHistory
+        conversations={conversations}
+        onSelectChat={handleSelectChat}
+        onDeleteChat={handleDeleteChat}
+        onEditTitle={handleEditTitle}
+        onNewChat={handleNewChat}
+        isOpen={isHistoryOpen}
+        currentChatId={currentChatId}
+        onClose={() => setIsHistoryOpen(false)}
+      />
     </div>
   );
 };
