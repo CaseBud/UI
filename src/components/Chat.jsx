@@ -140,14 +140,18 @@ const Chat = () => {
   // Helper function to simulate typing and show response gradually
   const showResponseGradually = async (response) => {
     setIsTyping(true);
-    const words = response.split(' ');
+    const characters = response.split('');
     let currentText = '';
-    const wordDelay = 50; // Adjust this value to control typing speed
+    const charDelay = 30; // Adjust for faster/slower typing
     
     try {
-      for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, wordDelay));
-        currentText += (i === 0 ? '' : ' ') + words[i];
+      for (let i = 0; i < characters.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, charDelay));
+        // Add small random variation to typing speed
+        const variation = Math.random() * 20;
+        await new Promise(resolve => setTimeout(resolve, variation));
+        
+        currentText += characters[i];
         setMessages(prev => {
           const newMessages = [...prev];
           const lastIndex = newMessages.length - 1;
@@ -158,6 +162,11 @@ const Chat = () => {
           };
           return newMessages;
         });
+
+        // Add slight pause at punctuation marks
+        if (['.', '?', '!', ',', ';'].includes(characters[i])) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
       }
     } finally {
       setIsTyping(false);

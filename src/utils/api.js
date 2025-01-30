@@ -142,20 +142,39 @@ export const chatApi = {
 
 export const documentsApi = {
   uploadDocument: async (file, name) => {
+    // Log request details for debugging
+    console.log('Uploading document:', {
+      fileName: name,
+      fileSize: file.size,
+      fileType: file.type
+    });
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('name', name);
 
-    const response = await fetchWithToken('/api/documents', {
-      method: 'POST',
-      body: formData,
-      headers: {
-        // Remove Content-Type to let browser set it with boundary
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-    return response;
+    try {
+      const response = await fetchWithToken('/api/documents', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`,
+        },
+      });
+
+      // Log successful response
+      console.log('Upload response:', response);
+      return response;
+    } catch (error) {
+      // Log error details
+      console.error('Upload error details:', {
+        status: error.status,
+        message: error.message,
+        response: error.response
+      });
+      throw error;
+    }
   }
 };
 

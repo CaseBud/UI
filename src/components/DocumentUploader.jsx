@@ -12,25 +12,50 @@ const DocumentIcon = () => (
   </svg>
 );
 
-const UploadAnimation = ({ progress }) => (
-  <div className="relative w-5 h-5">
-    <svg className="absolute inset-0 animate-spin" viewBox="0 0 24 24">
-      <circle 
-        className="opacity-25" 
-        cx="12" cy="12" r="10" 
-        stroke="currentColor" 
-        strokeWidth="4"
-        fill="none"
-      />
-      <path 
-        className="opacity-75" 
-        fill="currentColor" 
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-      />
-    </svg>
-    <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
-      {progress}%
-    </span>
+const ProgressRing = ({ progress }) => {
+  const radius = 10;
+  const strokeWidth = 2;
+  const normalizedRadius = radius - strokeWidth;
+  const circumference = normalizedRadius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (progress / 100) * circumference;
+
+  return (
+    <div className="relative w-6 h-6 transform transition-transform duration-300 scale-110">
+      <svg className="transform -rotate-90 w-full h-full">
+        {/* Background circle */}
+        <circle
+          stroke="currentColor"
+          className="text-slate-600"
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          r={normalizedRadius}
+          cx={radius + 2}
+          cy={radius + 2}
+        />
+        {/* Progress circle */}
+        <circle
+          stroke="currentColor"
+          className="text-blue-500 transition-all duration-300 ease-in-out"
+          fill="transparent"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference + ' ' + circumference}
+          style={{ strokeDashoffset }}
+          r={normalizedRadius}
+          cx={radius + 2}
+          cy={radius + 2}
+        />
+      </svg>
+      <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-slate-200">
+        {progress}%
+      </span>
+    </div>
+  );
+};
+
+const UploadingAnimation = ({ progress }) => (
+  <div className="relative transform transition-all duration-300 ease-out">
+    <div className="absolute inset-0 bg-blue-500/20 animate-pulse rounded-full" />
+    <ProgressRing progress={progress} />
   </div>
 );
 
@@ -40,6 +65,20 @@ const DocumentUploader = ({ onUploadComplete }) => {
   const [notification, setNotification] = useState(null);
   const fileInputRef = useRef(null);
 
+  const simulateProgress = (callback) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 90) {
+        clearInterval(interval);
+        return;
+      }
+      setUploadProgress(Math.min(Math.round(progress), 90));
+    }, 200);
+
+    return () => clearInterval(interval);
+  };
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -48,10 +87,16 @@ const DocumentUploader = ({ onUploadComplete }) => {
     setUploadProgress(0);
     
     try {
-      // File size validation (5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        throw new Error('File size must be less than 5MB');
-      }
+      // Start progress simulation
+      const stopProgress = simulateProgress();
+      
+      // Log file details for debugging
+      console.log('File details:', {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        sizeInMB: file.size / (1024 * 1024)
+      });
 
       // File type validation
       const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
@@ -60,22 +105,36 @@ const DocumentUploader = ({ onUploadComplete }) => {
         throw new Error(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`);
       }
 
-      setUploadProgress(50);
       const response = await documentsApi.uploadDocument(file, file.name);
+      
+      // Complete the progress animation
+      stopProgress();
       setUploadProgress(100);
       
-      onUploadComplete?.(response);
-      showNotification('Document uploaded successfully', 'success');
+      // Show success with a slight delay for smooth animation
+      setTimeout(() => {
+        onUploadComplete?.(response);
+        showNotification('Document uploaded successfully', 'success');
+        event.target.value = '';
+      }, 300);
       
-      event.target.value = '';
-      
+      // Reset after animation completes
       setTimeout(() => {
         setUploadProgress(0);
         setIsUploading(false);
-      }, 500);
+      }, 800);
     } catch (error) {
       console.error('Failed to upload document:', error);
-      showNotification(error.message || 'Failed to upload document. Please try again.');
+      let errorMessage = error.message;
+      
+      // Handle specific error cases
+      if (error.status === 413) {
+        errorMessage = 'File size too large. Please try a smaller file.';
+      } else if (error.status === 415) {
+        errorMessage = 'Invalid file type. Please try another format.';
+      }
+      
+      showNotification(errorMessage || 'Failed to upload document. Please try again.');
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -87,13 +146,13 @@ const DocumentUploader = ({ onUploadComplete }) => {
 
   return (
     <>
-      <div className="relative">
+      <div className="relative group">
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-2 rounded-md text-slate-400 hover:text-white transition-colors"
+          className="p-2 rounded-md text-slate-400 hover:text-white transition-all duration-300 ease-in-out transform hover:scale-105"
           title="Click to upload a document"
         >
-          {isUploading ? <UploadAnimation progress={uploadProgress} /> : <DocumentIcon />}
+          {isUploading ? <UploadingAnimation progress={uploadProgress} /> : <DocumentIcon />}
         </button>
         
         <input

@@ -1,16 +1,15 @@
-import { Navigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, redirectTo = "/" }) => {
   const isAuthenticated = authService.isAuthenticated();
-  console.log('ProtectedRoute - Auth status:', isAuthenticated);
-  
+
+  // Instead of checking auth state, just redirect to landing
   if (!isAuthenticated) {
-    console.log('ProtectedRoute - Redirecting to login');
-    return <Navigate to="/login" replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
-  console.log('ProtectedRoute - Rendering protected content');
   return children;
 };
 
