@@ -7,16 +7,18 @@ const ChatHistory = ({
   onEditTitle,
   onNewChat,
   isOpen,
-  currentChatId,
+  currentconversationId,
   onClose 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
 
-  const filteredConversations = conversations.filter(chat => 
-    chat.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredConversations = conversations && Array.isArray(conversations) 
+    ? conversations.filter(chat => 
+        chat.title.toLowerCase().includes(searchTerm.toLowerCase())
+      ) 
+    : [];
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -27,8 +29,8 @@ const ChatHistory = ({
     });
   };
 
-  const handleEditSubmit = (chatId) => {
-    onEditTitle(chatId, newTitle);
+  const handleEditSubmit = (conversationId) => {
+    onEditTitle(conversationId, newTitle);
     setEditingId(null);
     setNewTitle('');
   };
@@ -82,7 +84,7 @@ const ChatHistory = ({
             <div 
               key={chat.id}
               className={`group p-3 mb-2 rounded-lg cursor-pointer transition-all
-                        ${currentChatId === chat.id 
+                        ${currentconversationId === chat.id 
                           ? 'bg-blue-600 text-white' 
                           : 'hover:bg-slate-700/50 text-slate-300'}`}
             >

@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { chatApi } from '../utils/api';
 import { authService } from '../services/authService';
-import Sidebar from './Sidebar';  // Update import statement
+import Sidebar from './Sidebar';
 import ChatHistory from './ChatHistory';
+import TypingAnimation from './TypingAnimation';  // Ensure this import is correct
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -35,12 +36,12 @@ const Chat = () => {
     type: 'assistant',
     content: 'Hello! How can I help you today?'
   }]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
   const inputRef = useRef(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
-  const [currentChatId, setCurrentChatId] = useState(null);
+  const [currentconversationId, setCurrentconversationId] = useState(null);
 
   const user = authService.getCurrentUser();
 
@@ -66,7 +67,7 @@ const Chat = () => {
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('https://case-bud-backend.onrender.com/api/chat/', {
+      const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
         }
@@ -78,42 +79,42 @@ const Chat = () => {
     }
   };
 
-  const handleSelectChat = async (chatId) => {
+  const handleSelectChat = async (conversationId) => {
     try {
-      const response = await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}/`, {
+      const response = await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}/`, {
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
         }
       });
       const data = await response.json();
       setMessages(data.messages);
-      setCurrentChatId(chatId);
+      setCurrentconversationId(conversationId);
     } catch (error) {
       console.error('Failed to fetch chat:', error);
     }
   };
 
-  const handleDeleteChat = async (chatId) => {
+  const handleDeleteChat = async (conversationId) => {
     try {
-      await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}`, {
+      await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
         }
       });
-      setConversations(prev => prev.filter(chat => chat.id !== chatId));
-      if (currentChatId === chatId) {
+      setConversations(prev => prev.filter(chat => chat.id !== conversationId));
+      if (currentconversationId === conversationId) {
         setMessages([]);
-        setCurrentChatId(null);
+        setCurrentconversationId(null);
       }
     } catch (error) {
       console.error('Failed to delete chat:', error);
     }
   };
 
-  const handleEditTitle = async (chatId, newTitle) => {
+  const handleEditTitle = async (conversationId, newTitle) => {
     try {
-      await fetch(`https://case-bud-backend.onrender.com/api/chat/${chatId}`, {
+      await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -122,30 +123,61 @@ const Chat = () => {
         body: JSON.stringify({ title: newTitle })
       });
       setConversations(prev => prev.map(chat => 
-        chat.id === chatId ? { ...chat, title: newTitle } : chat
+        chat.id === conversationId ? { ...chat, title: newTitle } : chat
       ));
     } catch (error) {
       console.error('Failed to update chat title:', error);
     }
   };
 
+  // Helper function to simulate typing and show response gradually
+  const showResponseGradually = async (response) => {
+    setIsTyping(true);
+    const words = response.split(' ');
+    let currentText = '';
+    const wordDelay = 50; // Adjust this value to control typing speed
+    
+    try {
+      for (let i = 0; i < words.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, wordDelay));
+        currentText += (i === 0 ? '' : ' ') + words[i];
+        setMessages(prev => {
+          const newMessages = [...prev];
+          const lastIndex = newMessages.length - 1;
+          newMessages[lastIndex] = {
+            ...newMessages[lastIndex],
+            content: currentText,
+            timestamp: new Date()
+          };
+          return newMessages;
+        });
+      }
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
   const sendMessage = async (content) => {
-    if (!content.trim() || isAnalyzing) return;
+    if (!content.trim() || isTyping) return;
 
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
 
     try {
-      setIsAnalyzing(true);
       setMessages(prev => [...prev, newUserMessage]);
       setMessage(''); // Clear input immediately for better UX
 
-      const response = await chatApi.sendMessage(content);
-
+      // Add empty assistant message first
       setMessages(prev => [...prev, {
         type: 'assistant',
-        content: response.response || response.message,
+        content: '',
         timestamp: new Date()
       }]);
+
+      const response = await chatApi.sendMessage(content);
+
+      // Show response gradually
+      await showResponseGradually(response.response || response.message);
+
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -153,8 +185,6 @@ const Chat = () => {
         content: 'Failed to send message. Please try again.',
         timestamp: new Date()
       }]);
-    } finally {
-      setIsAnalyzing(false);
     }
   };
 
@@ -180,7 +210,7 @@ const Chat = () => {
       // First, save the current chat if it exists and has messages
       if (messages.length > 1) { // More than just the initial greeting
         const title = messages[1].content.slice(0, 40) + '...'; // Use first user message as title
-        const response = await fetch('https://case-bud-backend.onrender.com/api/chat/', {
+        const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authService.getToken()}`,
@@ -204,7 +234,7 @@ const Chat = () => {
         content: 'Hello! How can I help you today?',
         timestamp: new Date()
       }]);
-      setCurrentChatId(null);
+      setCurrentconversationId(null);
       setMessage('');
       
       // Optional: Close the history sidebar on mobile
@@ -295,17 +325,17 @@ const Chat = () => {
                 message={msg}
               />
             ))}
-            <div ref={chatContainerRef} /> {/* Scroll anchor */}
-            {isAnalyzing && (
-              <div className="flex items-center space-x-2">
+            {isTyping && (
+              <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                  <IconComponents.Loader2 className="w-5 h-5 text-white animate-spin" />
+                  <IconComponents.MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <div className="rounded-2xl bg-slate-700/50 backdrop-blur-sm px-4 py-2">
-                  <p className="text-slate-300">Analyzing...</p>
+                  <TypingAnimation />
                 </div>
               </div>
             )}
+            <div ref={chatContainerRef} /> {/* Scroll anchor */}
           </div>
         </div>
 
@@ -325,11 +355,11 @@ const Chat = () => {
                     className="w-full rounded-lg pl-4 pr-12 py-3 bg-slate-700/50 border border-slate-600/50 
                              text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
-                    disabled={isAnalyzing}
+                    disabled={isTyping}
                   />
                   <button 
                     type="submit"
-                    disabled={isAnalyzing || !message.trim()}
+                    disabled={isTyping || !message.trim()}
                     className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2
                              text-slate-400 hover:text-white disabled:opacity-50
                              disabled:cursor-not-allowed transition-all duration-200"
@@ -349,7 +379,7 @@ const Chat = () => {
         onEditTitle={handleEditTitle}
         onNewChat={handleNewChat}
         isOpen={isHistoryOpen}
-        currentChatId={currentChatId}
+        currentconversationId={currentconversationId}
         onClose={() => setIsHistoryOpen(false)}
       />
     </div>
