@@ -8,9 +8,9 @@ import TypingAnimation from './TypingAnimation';  // Ensure this import is corre
 // Replace lucide-react imports with SVG components
 const IconComponents = {
   MessageCircle: (props) => (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-    </svg>
+    <svg className="h-6 w-6 text-black-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+  </svg>
   ),
   Send: (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,6 +29,7 @@ const IconComponents = {
     </svg>
   )
 };
+
 
 const Chat = () => {
   const [message, setMessage] = useState('');
@@ -231,7 +232,7 @@ const Chat = () => {
       // Reset current chat state
       setMessages([{
         type: 'assistant',
-        content: 'Hello! How can I help you today?',
+        content: 'Hello ! How can I help you today?',
         timestamp: new Date()
       }]);
       setCurrentconversationId(null);
@@ -299,7 +300,9 @@ const Chat = () => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <IconComponents.MessageCircle className="w-6 h-6 text-white" />
+            <svg className="h-6 w-6 text-black-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+              </svg>
             </div>
             <div>
               <h1 className="text-xl font-semibold text-white">Legal Assistant</h1>
