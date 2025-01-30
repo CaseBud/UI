@@ -1,4 +1,4 @@
-import { setAuthToken, checkToken } from '../utils/auth';
+import { setAuthToken, checkToken, getAuthToken } from '../utils/auth';
 
 const BASE_URL = 'https://case-bud-backend.vercel.app';
 
