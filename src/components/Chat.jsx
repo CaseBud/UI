@@ -4,6 +4,8 @@ import { authService } from '../services/authService';
 import Sidebar from './Sidebar';
 import ChatHistory from './ChatHistory';
 import TypingAnimation from './TypingAnimation';  // Ensure this import is correct
+import DocumentUploader from './DocumentUploader';
+import DocumentPreview from './DocumentPreview';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -32,10 +34,13 @@ const IconComponents = {
 
 
 const Chat = () => {
+  const user = authService.getCurrentUser();
+  const defaultGreeting = `Hello ${user?.name || ''}! How can I help you today?`;
+
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([{
     type: 'assistant',
-    content: 'Hello! How can I help you today?'
+    content: defaultGreeting
   }]);
   const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
@@ -43,8 +48,9 @@ const Chat = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [currentconversationId, setCurrentconversationId] = useState(null);
-
-  const user = authService.getCurrentUser();
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [isNewConversation, setIsNewConversation] = useState(true);
 
   useEffect(() => {
     // Scroll to bottom when messages update
@@ -158,6 +164,24 @@ const Chat = () => {
     }
   };
 
+  const handleDocumentSelect = (docId) => {
+    setSelectedDocuments(prev => {
+      const isSelected = prev.includes(docId);
+      return isSelected ? prev.filter(id => id !== docId) : [...prev, docId];
+    });
+  };
+
+  const handleUploadComplete = (document) => {
+    setUploadedDocuments(prev => [...prev, document]);
+    // Add a system message about the upload
+    setMessages(prev => [...prev, {
+      type: 'system',
+      content: `Document "${document.name}" has been uploaded.`,
+      document: document,
+      timestamp: new Date()
+    }]);
+  };
+
   const sendMessage = async (content) => {
     if (!content.trim() || isTyping) return;
 
@@ -174,7 +198,18 @@ const Chat = () => {
         timestamp: new Date()
       }]);
 
-      const response = await chatApi.sendMessage(content);
+      // Use document analysis endpoint if documents are selected
+      const response = selectedDocuments.length > 0
+        ? await chatApi.sendDocumentAnalysis(content, selectedDocuments, currentconversationId)
+        : await chatApi.sendMessage(content, { 
+            conversationId: currentconversationId 
+          });
+
+      // Update conversation ID if this is a new conversation
+      if (isNewConversation && response.conversationId) {
+        setCurrentconversationId(response.conversationId);
+        setIsNewConversation(false);
+      }
 
       // Show response gradually
       await showResponseGradually(response.response || response.message);
@@ -229,14 +264,16 @@ const Chat = () => {
         }
       }
 
-      // Reset current chat state
+      // Reset current chat state with personalized greeting
       setMessages([{
         type: 'assistant',
-        content: 'Hello ! How can I help you today?',
+        content: defaultGreeting,
         timestamp: new Date()
       }]);
       setCurrentconversationId(null);
+      setIsNewConversation(true);
       setMessage('');
+      setSelectedDocuments([]);
       
       // Optional: Close the history sidebar on mobile
       if (window.innerWidth < 768) {
@@ -253,6 +290,7 @@ const Chat = () => {
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
+    const isSystem = message.type === 'system';
 
     return (
       <div className={`flex items-end space-x-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -267,9 +305,14 @@ const Chat = () => {
             ? 'bg-blue-600 text-white ml-12'
             : isError
             ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+            : isSystem
+            ? 'bg-slate-600/50 text-slate-200'
             : 'bg-slate-700/50 backdrop-blur-sm text-slate-100'
         }`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          {message.document && message.document.name && (
+            <DocumentPreview document={message.document} />
+          )}
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -360,15 +403,20 @@ const Chat = () => {
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                     disabled={isTyping}
                   />
-                  <button 
-                    type="submit"
-                    disabled={isTyping || !message.trim()}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2
-                             text-slate-400 hover:text-white disabled:opacity-50
-                             disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    <IconComponents.Send className="w-5 h-5" />
-                  </button>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                    <DocumentUploader 
+                      onDocumentSelect={handleDocumentSelect} 
+                      onUploadComplete={handleUploadComplete}
+                    />
+                    <button 
+                      type="submit"
+                      disabled={isTyping || !message.trim()}
+                      className="rounded-md p-2 text-slate-400 hover:text-white disabled:opacity-50
+                                disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      <IconComponents.Send className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

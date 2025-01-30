@@ -156,39 +156,7 @@ export const documentsApi = {
       },
     });
     return response;
-  },
-
-  getAllDocuments: async () => {
-    return await fetchWithToken('/api/documents');
-  },
-
-  getDocument: async (id) => {
-    return await fetchWithToken(`/api/documents/${id}`);
-  },
-
-  updateDocument: async (id, file) => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return await fetchWithToken(`/api/documents/${id}`, {
-      method: 'PUT',
-      body: formData,
-    });
-  },
-
-  deleteDocument: async (id) => {
-    return await fetchWithToken(`/api/documents/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  getVersions: async (id) => {
-    return await fetchWithToken(`/api/documents/${id}/versions`);
-  },
-
-  getVersion: async (id, versionNumber) => {
-    return await fetchWithToken(`/api/documents/${id}/versions/${versionNumber}`);
-  },
+  }
 };
 
 export const api = {
