@@ -217,7 +217,16 @@ const Login = () => {
             >
               Create one now
             </Link>
+            <br />
+            <Link 
+              to="/" 
+              className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+            >
+              Forgot Password? 
+            </Link>
           </p>
+
+        
         </div>
       </div>
     </div>
