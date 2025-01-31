@@ -153,30 +153,30 @@ export const documentsApi = {
     formData.append('file', file);
     formData.append('name', name);
 
-    try {
-      const response = await fetchWithToken('/api/documents', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-      });
+      try {
+        const response = await fetchWithToken('/api/documents', {
+          method: 'POST',
+          body: formData,
+          headers: {
+             
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+        });
 
-      // Log successful response
-      console.log('Upload response:', response);
-      return response;
-    } catch (error) {
-      // Log error details
-      console.error('Upload error details:', {
-        status: error.status,
-        message: error.message,
-        response: error.response
-      });
-      throw error;
+        // Log successful response
+        console.log('Upload response:', response);
+        return response;
+      } catch (error) {
+        // Log error details
+        console.error('Upload error details:', {
+          status: error.status,
+          message: error.message,
+          response: error.response
+        });
+        throw error;
+      }
     }
-  }
-};
+  };
 
 export const api = {
   login: async (credentials) => {
