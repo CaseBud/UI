@@ -4,8 +4,8 @@ const BASE_URL = 'https://case-bud-backend.vercel.app';
 
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-export const authService = {
-  login: async (credentials) => {
+class AuthService {
+  login = async (credentials) => {
     try {
       console.log('Attempting login with:', {
         url: `${BASE_URL}/api/auth/login`,
@@ -70,9 +70,9 @@ export const authService = {
       localStorage.removeItem('lastActivity');
       throw error;
     }
-  },
+  };
 
-  register: async (userData) => {
+  register = async (userData) => {
     const response = await fetch(`${BASE_URL}/api/auth/signup`, {
       method: 'POST',
       headers: {
@@ -88,9 +88,9 @@ export const authService = {
     }
 
     return data;
-  },
+  };
 
-  verifyEmail: async (verificationData) => {
+  verifyEmail = async (verificationData) => {
     const response = await fetch(`${BASE_URL}/api/auth/verify-email`, {
       method: 'POST',
       headers: {
@@ -106,9 +106,9 @@ export const authService = {
     }
 
     return data;
-  },
+  };
 
-  resendVerification: async (email) => {
+  resendVerification = async (email) => {
     const response = await fetch(`${BASE_URL}/api/auth/resend-verification`, {
       method: 'POST',
       headers: {
@@ -122,9 +122,9 @@ export const authService = {
       throw new Error(data.message || 'Failed to resend verification');
     }
     return data;
-  },
+  };
 
-  forgotPassword: async (email) => {
+  forgotPassword = async (email) => {
     const response = await fetch(`${BASE_URL}/api/auth/forgot-password`, {
       method: 'POST',
       headers: {
@@ -138,9 +138,9 @@ export const authService = {
       throw new Error(data.message || 'Failed to initiate password reset');
     }
     return data;
-  },
+  };
 
-  resetPassword: async (resetData) => {
+  resetPassword = async (resetData) => {
     const response = await fetch(`${BASE_URL}/api/auth/reset-password`, {
       method: 'POST',
       headers: {
@@ -154,24 +154,37 @@ export const authService = {
       throw new Error(data.message || 'Password reset failed');
     }
     return data;
-  },
+  };
 
-  logout: () => {
+  logout = () => {
     setAuthToken(null);
     localStorage.removeItem('user');
-  },
+  };
 
-  getCurrentUser: () => {
+  getCurrentUser = () => {
     try {
       return JSON.parse(localStorage.getItem('user'));
     } catch {
       return null;
     }
-  },
+  };
 
-  getToken: () => getAuthToken(),
+  getToken = () => getAuthToken();
 
-  isAuthenticated: () => checkToken(),
+  isAuthenticated = () => {
+    const token = this.getToken();
+    if (!token) return false;
+    
+    try {
+      // Check if token is expired
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload.exp > Date.now() / 1000;
+    } catch (error) {
+      return false;
+    }
+  };
 
-  updateActivity: () => {}
-};
+  updateActivity = () => {};
+}
+
+export const authService = new AuthService();

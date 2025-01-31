@@ -4,13 +4,15 @@ import { authService } from '../services/authService';
 import Sidebar from './Sidebar';
 import ChatHistory from './ChatHistory';
 import TypingAnimation from './TypingAnimation';  // Ensure this import is correct
+import DocumentUploader from './DocumentUploader';
+import DocumentPreview from './DocumentPreview';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
   MessageCircle: (props) => (
-    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
-    </svg>
+    <svg className="h-6 w-6 text-black-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+  </svg>
   ),
   Send: (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,11 +32,15 @@ const IconComponents = {
   )
 };
 
+
 const Chat = () => {
+  const user = authService.getCurrentUser();
+  const defaultGreeting = `Hello ${user?.name || ''}! How can I help you today?`;
+
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([{
     type: 'assistant',
-    content: 'Hello! How can I help you today?'
+    content: defaultGreeting
   }]);
   const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
@@ -42,8 +48,9 @@ const Chat = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [currentconversationId, setCurrentconversationId] = useState(null);
-
-  const user = authService.getCurrentUser();
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [isNewConversation, setIsNewConversation] = useState(true);
 
   useEffect(() => {
     // Scroll to bottom when messages update
@@ -133,14 +140,18 @@ const Chat = () => {
   // Helper function to simulate typing and show response gradually
   const showResponseGradually = async (response) => {
     setIsTyping(true);
-    const words = response.split(' ');
+    const characters = response.split('');
     let currentText = '';
-    const wordDelay = 50; // Adjust this value to control typing speed
+    const charDelay = 30; // Adjust for faster/slower typing
     
     try {
-      for (let i = 0; i < words.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, wordDelay));
-        currentText += (i === 0 ? '' : ' ') + words[i];
+      for (let i = 0; i < characters.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, charDelay));
+        // Add small random variation to typing speed
+        const variation = Math.random() * 20;
+        await new Promise(resolve => setTimeout(resolve, variation));
+        
+        currentText += characters[i];
         setMessages(prev => {
           const newMessages = [...prev];
           const lastIndex = newMessages.length - 1;
@@ -151,10 +162,33 @@ const Chat = () => {
           };
           return newMessages;
         });
+
+        // Add slight pause at punctuation marks
+        if (['.', '?', '!', ',', ';'].includes(characters[i])) {
+          await new Promise(resolve => setTimeout(resolve, 150));
+        }
       }
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleDocumentSelect = (docId) => {
+    setSelectedDocuments(prev => {
+      const isSelected = prev.includes(docId);
+      return isSelected ? prev.filter(id => id !== docId) : [...prev, docId];
+    });
+  };
+
+  const handleUploadComplete = (document) => {
+    setUploadedDocuments(prev => [...prev, document]);
+    // Add a system message about the upload
+    setMessages(prev => [...prev, {
+      type: 'system',
+      content: `Document "${document.name}" has been uploaded.`,
+      document: document,
+      timestamp: new Date()
+    }]);
   };
 
   const sendMessage = async (content) => {
@@ -173,7 +207,18 @@ const Chat = () => {
         timestamp: new Date()
       }]);
 
-      const response = await chatApi.sendMessage(content);
+      // Use document analysis endpoint if documents are selected
+      const response = selectedDocuments.length > 0
+        ? await chatApi.sendDocumentAnalysis(content, selectedDocuments, currentconversationId)
+        : await chatApi.sendMessage(content, { 
+            conversationId: currentconversationId 
+          });
+
+      // Update conversation ID if this is a new conversation
+      if (isNewConversation && response.conversationId) {
+        setCurrentconversationId(response.conversationId);
+        setIsNewConversation(false);
+      }
 
       // Show response gradually
       await showResponseGradually(response.response || response.message);
@@ -228,14 +273,16 @@ const Chat = () => {
         }
       }
 
-      // Reset current chat state
+      // Reset current chat state with personalized greeting
       setMessages([{
         type: 'assistant',
-        content: 'Hello! How can I help you today?',
+        content: defaultGreeting,
         timestamp: new Date()
       }]);
       setCurrentconversationId(null);
+      setIsNewConversation(true);
       setMessage('');
+      setSelectedDocuments([]);
       
       // Optional: Close the history sidebar on mobile
       if (window.innerWidth < 768) {
@@ -252,6 +299,7 @@ const Chat = () => {
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
+    const isSystem = message.type === 'system';
 
     return (
       <div className={`flex items-end space-x-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -266,9 +314,14 @@ const Chat = () => {
             ? 'bg-blue-600 text-white ml-12'
             : isError
             ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+            : isSystem
+            ? 'bg-slate-600/50 text-slate-200'
             : 'bg-slate-700/50 backdrop-blur-sm text-slate-100'
         }`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+          {message.document && message.document.name && (
+            <DocumentPreview document={message.document} />
+          )}
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -299,7 +352,9 @@ const Chat = () => {
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-              <IconComponents.MessageCircle className="w-6 h-6 text-white" />
+            <svg className="h-6 w-6 text-black-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+              </svg>
             </div>
             <div>
               <h1 className="text-xl font-semibold text-white">Legal Assistant</h1>
@@ -357,15 +412,20 @@ const Chat = () => {
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                     disabled={isTyping}
                   />
-                  <button 
-                    type="submit"
-                    disabled={isTyping || !message.trim()}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-2
-                             text-slate-400 hover:text-white disabled:opacity-50
-                             disabled:cursor-not-allowed transition-all duration-200"
-                  >
-                    <IconComponents.Send className="w-5 h-5" />
-                  </button>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                    <DocumentUploader 
+                      onDocumentSelect={handleDocumentSelect} 
+                      onUploadComplete={handleUploadComplete}
+                    />
+                    <button 
+                      type="submit"
+                      disabled={isTyping || !message.trim()}
+                      className="rounded-md p-2 text-slate-400 hover:text-white disabled:opacity-50
+                                disabled:cursor-not-allowed transition-all duration-200"
+                    >
+                      <IconComponents.Send className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
