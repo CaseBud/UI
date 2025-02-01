@@ -6,6 +6,7 @@ import ChatHistory from './ChatHistory';
 import TypingAnimation from './TypingAnimation';  // Ensure this import is correct
 import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
+import VoiceChat from './VoiceChat';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -296,6 +297,11 @@ const Chat = () => {
   // Replace the existing handleNewChat with createNewChat
   const handleNewChat = createNewChat;
 
+  const handleVoiceInput = (text) => {
+    // This will be implemented when the backend is ready
+    setMessage(text);
+  };
+
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
@@ -407,12 +413,16 @@ const Chat = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Ask any legal question..."
-                    className="w-full rounded-lg pl-4 pr-12 py-3 bg-slate-700/50 border border-slate-600/50 
+                    className="w-full rounded-lg pl-4 pr-24 py-3 bg-slate-700/50 border border-slate-600/50 
                              text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                     disabled={isTyping}
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                    <VoiceChat 
+                      onVoiceInput={handleVoiceInput}
+                      disabled={isTyping}
+                    />
                     <DocumentUploader 
                       onDocumentSelect={handleDocumentSelect} 
                       onUploadComplete={handleUploadComplete}
