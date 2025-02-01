@@ -21,37 +21,20 @@ const Login = () => {
     setSuccess(false);
 
     try {
-      console.log('Submitting login form with email:', credentials.email);
-      
       const response = await authService.login({
         email: credentials.email.trim(),
         password: credentials.password
       });
 
-      console.log('Login response received:', { 
-        success: !!response.token,
-        user: response.user ? 'present' : 'missing'
-      });
-
       if (response && response.token) {
         setSuccess(true);
-        setTimeout(() => {
-          navigate('/chat', { replace: true });
-        }, 100);
-      } else {
-        throw new Error('Invalid response from server');
+        // Add a short delay to show success message
+        await new Promise(resolve => setTimeout(resolve, 500));
+        navigate('/chat', { replace: true });
       }
     } catch (err) {
-      console.error('Login error details:', {
-        message: err.message,
-        status: err.status,
-        stack: err.stack
-      });
-      setError(
-        err.message === 'Invalid server response' 
-          ? 'Server error occurred. Please try again later.'
-          : err.message || 'Login failed. Please check your credentials and try again.'
-      );
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
       authService.logout();
     } finally {
       setIsLoading(false);

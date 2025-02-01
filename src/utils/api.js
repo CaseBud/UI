@@ -117,14 +117,57 @@ export const chatApi = {
     }
   },
 
-  // Simplified API methods
-  getConversations: () => Promise.resolve({ conversations: [] }),
+  getConversations: async () => {
+    try {
+      const response = await fetchWithToken('/api/chat');
+      
+      // Check if response exists
+      if (!response?.data) {
+        console.warn('No data in response');
+        return [];
+      }
+
+      return response.data.map(conv => ({
+        id: conv.id,
+        title: conv.title,
+        created_at: conv.created_at,
+        updated_at: conv.updated_at,
+        message_count: conv.messages?.length || 0
+      }));
+    } catch (error) {
+      console.error('Failed to fetch conversations:', error);
+      throw error;
+    }
+  },
+
+  getConversationById: async (conversationId) => {
+    try {
+      const response = await fetchWithToken(`/api/chat/${conversationId}/`);
+      
+      if (!response?.data) {
+        throw new Error('No conversation data found');
+      }
+
+      return {
+        ...response.data,
+        messages: response.data.messages.map(msg => ({
+          id: msg.id,
+          content: msg.content,
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          timestamp: msg.created_at
+        }))
+      };
+    } catch (error) {
+      console.error(`Failed to fetch conversation ${conversationId}:`, error);
+      throw error;
+    }
+  },
+
   getConversation: () => Promise.resolve({ messages: [] }),
   deleteConversation: () => Promise.resolve(),
   updateConversationTitle: () => Promise.resolve(),
   uploadDocument: () => Promise.resolve({ id: Date.now() }),
   sendDocumentAnalysis: (query) => chatApi.sendMessage(query),
-  deleteDocument: () => Promise.resolve(),
 
   sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
     const response = await fetchWithToken('/api/chat/document-analysis', {
@@ -137,6 +180,27 @@ export const chatApi = {
     });
 
     return response;
+  },
+
+  createNewChat: async (title, messages) => {
+    try {
+      const response = await fetchWithToken('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          messages: messages.map(msg => ({
+            content: msg.content,
+            type: msg.type,
+            timestamp: msg.timestamp
+          }))
+        })
+      });
+
+      return response;
+    } catch (error) {
+      console.error('Failed to create new chat:', error);
+      throw error;
+    }
   },
 };
 
@@ -153,30 +217,30 @@ export const documentsApi = {
     formData.append('file', file);
     formData.append('name', name);
 
-    try {
-      const response = await fetchWithToken('/api/documents', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-      });
+      try {
+        const response = await fetchWithToken('/api/documents', {
+          method: 'POST',
+          body: formData,
+          headers: {
+             
+            'Authorization': `Bearer ${getAuthToken()}`,
+          },
+        });
 
-      // Log successful response
-      console.log('Upload response:', response);
-      return response;
-    } catch (error) {
-      // Log error details
-      console.error('Upload error details:', {
-        status: error.status,
-        message: error.message,
-        response: error.response
-      });
-      throw error;
+        // Log successful response
+        console.log('Upload response:', response);
+        return response;
+      } catch (error) {
+        // Log error details
+        console.error('Upload error details:', {
+          status: error.status,
+          message: error.message,
+          response: error.response
+        });
+        throw error;
+      }
     }
-  }
-};
+  };
 
 export const api = {
   login: async (credentials) => {

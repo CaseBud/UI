@@ -6,6 +6,7 @@ import ChatHistory from './ChatHistory';
 import TypingAnimation from './TypingAnimation';  // Ensure this import is correct
 import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
+import VoiceChat from './VoiceChat';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -70,19 +71,18 @@ const Chat = () => {
 
   useEffect(() => {
     fetchConversations();
+    // Set up periodic refresh every 30 seconds
+    const refreshInterval = setInterval(fetchConversations, 30000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      });
-      const data = await response.json();
-      setConversations(data);
+      const conversations = await chatApi.getConversations();
+      setConversations(conversations);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
+      // Optionally show error notification to user
     }
   };
 
@@ -254,26 +254,13 @@ const Chat = () => {
     try {
       // First, save the current chat if it exists and has messages
       if (messages.length > 1) { // More than just the initial greeting
-        const title = messages[1].content.slice(0, 40) + '...'; // Use first user message as title
-        const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title,
-            messages: messages
-          })
-        });
+        const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
         
-        if (response.ok) {
-          // Refresh conversations list to show the new chat
-          fetchConversations();
-        }
+        await chatApi.createNewChat(title, messages);
+        await fetchConversations(); // Refresh the conversation list
       }
 
-      // Reset current chat state with personalized greeting
+      // Reset current chat state
       setMessages([{
         type: 'assistant',
         content: defaultGreeting,
@@ -284,7 +271,6 @@ const Chat = () => {
       setMessage('');
       setSelectedDocuments([]);
       
-      // Optional: Close the history sidebar on mobile
       if (window.innerWidth < 768) {
         setIsHistoryOpen(false);
       }
@@ -295,6 +281,11 @@ const Chat = () => {
 
   // Replace the existing handleNewChat with createNewChat
   const handleNewChat = createNewChat;
+
+  const handleVoiceInput = (text) => {
+    // This will be implemented when the backend is ready
+    setMessage(text);
+  };
 
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
@@ -407,12 +398,16 @@ const Chat = () => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={handleKeyPress}
                     placeholder="Ask any legal question..."
-                    className="w-full rounded-lg pl-4 pr-12 py-3 bg-slate-700/50 border border-slate-600/50 
+                    className="w-full rounded-lg pl-4 pr-24 py-3 bg-slate-700/50 border border-slate-600/50 
                              text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 
                              focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                     disabled={isTyping}
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
+                    <VoiceChat 
+                      onVoiceInput={handleVoiceInput}
+                      disabled={isTyping}
+                    />
                     <DocumentUploader 
                       onDocumentSelect={handleDocumentSelect} 
                       onUploadComplete={handleUploadComplete}
