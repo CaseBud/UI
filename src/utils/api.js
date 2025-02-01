@@ -16,7 +16,7 @@ const RETRY_DELAY = 1000; // 1 second
 
 const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const fetchWithToken = async (endpoint, options = {}) => {
+export const fetchWithToken = async (endpoint, options = {}, docUpload = false) => {
   const token = getAuthToken();
   
   if (!token) {
@@ -24,10 +24,13 @@ export const fetchWithToken = async (endpoint, options = {}) => {
   }
 
   const defaultHeaders = {
-    'Content-Type': 'application/json',
     'Accept': 'application/json',
     'Authorization': `Bearer ${token}`,
   };
+
+  if (!docUpload) {
+   defaultHeaders['Content-Type'] = 'application/json';
+  }
 
   try {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -236,7 +239,7 @@ export const documentsApi = {
              
             'Authorization': `Bearer ${getAuthToken()}`,
           },
-        });
+        }, true);
 
         // Log successful response
         console.log('Upload response:', response);
