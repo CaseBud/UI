@@ -14,7 +14,7 @@ const ForgotPassword = () => {
     setError('')
 
     try {
-      const response = await fetch('https://case-bud-backend.vercel.app/api/auth/forgot-password', {
+      const response = await fetch('https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/auth/forgot-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
