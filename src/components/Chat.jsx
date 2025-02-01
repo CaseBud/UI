@@ -71,19 +71,18 @@ const Chat = () => {
 
   useEffect(() => {
     fetchConversations();
+    // Set up periodic refresh every 30 seconds
+    const refreshInterval = setInterval(fetchConversations, 30000);
+    return () => clearInterval(refreshInterval);
   }, []);
 
   const fetchConversations = async () => {
     try {
-      const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      });
-      const data = await response.json();
-      setConversations(data);
+      const conversations = await chatApi.getConversations();
+      setConversations(conversations);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
+      // Optionally show error notification to user
     }
   };
 
@@ -255,26 +254,13 @@ const Chat = () => {
     try {
       // First, save the current chat if it exists and has messages
       if (messages.length > 1) { // More than just the initial greeting
-        const title = messages[1].content.slice(0, 40) + '...'; // Use first user message as title
-        const response = await fetch('https://case-bud-backend.vercel.app/api/chat/', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authService.getToken()}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title,
-            messages: messages
-          })
-        });
+        const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
         
-        if (response.ok) {
-          // Refresh conversations list to show the new chat
-          fetchConversations();
-        }
+        await chatApi.createNewChat(title, messages);
+        await fetchConversations(); // Refresh the conversation list
       }
 
-      // Reset current chat state with personalized greeting
+      // Reset current chat state
       setMessages([{
         type: 'assistant',
         content: defaultGreeting,
@@ -285,7 +271,6 @@ const Chat = () => {
       setMessage('');
       setSelectedDocuments([]);
       
-      // Optional: Close the history sidebar on mobile
       if (window.innerWidth < 768) {
         setIsHistoryOpen(false);
       }
