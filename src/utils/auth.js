@@ -1,4 +1,4 @@
-const BASE_URL = 'https://case-bud-backend.vercel.app';
+const BASE_URL = 'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/';
 const TOKEN_REFRESH_URL = 'https://case-bud-backend.onrender.com/api/auth/refresh';
 
 export const refreshToken = async () => {

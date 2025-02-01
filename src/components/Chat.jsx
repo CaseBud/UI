@@ -88,22 +88,24 @@ const Chat = () => {
 
   const handleSelectChat = async (conversationId) => {
     try {
-      const response = await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}/`, {
-        headers: {
-          'Authorization': `Bearer ${authService.getToken()}`
-        }
-      });
-      const data = await response.json();
-      setMessages(data.messages);
+      const conversation = await chatApi.getConversationById(conversationId);
+      setMessages(conversation.messages);
       setCurrentconversationId(conversationId);
+      setIsNewConversation(false);
     } catch (error) {
       console.error('Failed to fetch chat:', error);
+      // Show error message to user
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: 'Failed to load conversation. Please try again.',
+        timestamp: new Date()
+      }]);
     }
   };
 
   const handleDeleteChat = async (conversationId) => {
     try {
-      await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}`, {
+      await fetch(`https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`
@@ -121,7 +123,7 @@ const Chat = () => {
 
   const handleEditTitle = async (conversationId, newTitle) => {
     try {
-      await fetch(`https://case-bud-backend.vercel.app/api/chat/${conversationId}`, {
+      await fetch(`https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${authService.getToken()}`,
@@ -214,10 +216,15 @@ const Chat = () => {
             conversationId: currentconversationId 
           });
 
+      if (!response?.response && !response?.message) {
+        throw new Error('Empty response from server');
+      }
+
       // Update conversation ID if this is a new conversation
       if (isNewConversation && response.conversationId) {
         setCurrentconversationId(response.conversationId);
         setIsNewConversation(false);
+        await fetchConversations(); // Refresh conversation list
       }
 
       // Show response gradually
@@ -225,9 +232,17 @@ const Chat = () => {
 
     } catch (error) {
       console.error('Chat error:', error);
+      let errorMessage = 'Failed to send message. Please try again.';
+      
+      if (error.status === 500) {
+        errorMessage = 'The AI service is temporarily unavailable. Please try again in a few moments.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       setMessages(prev => [...prev, {
         type: 'error',
-        content: 'Failed to send message. Please try again.',
+        content: errorMessage,
         timestamp: new Date()
       }]);
     }

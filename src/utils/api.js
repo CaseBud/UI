@@ -2,7 +2,7 @@ import { authService } from '../services/authService';
 import { getAuthToken } from './auth';
 
  
-const BASE_URL = 'https://case-bud-backend.vercel.app';  // Ensure this URL is correct
+const BASE_URL = 'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net';  // Ensure this URL is correct
 
 export class ApiError extends Error {
   constructor(message, status) {
@@ -53,13 +53,16 @@ export const fetchWithToken = async (endpoint, options = {}) => {
 };
 
 const handleResponse = async (response) => {
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    throw new ApiError('Invalid JSON response from server', 500);
+  }
   
   if (!response.ok) {
-    const error = new ApiError(
-      data.message || 'Something went wrong',
-      response.status
-    );
+    const errorMessage = data?.message || data?.error || 'Something went wrong';
+    const error = new ApiError(errorMessage, response.status);
     error.data = data;
     throw error;
   }
@@ -82,12 +85,15 @@ const retryWithDelay = async (fn, retries = MAX_RETRIES) => {
 export const chatApi = {
   sendMessage: async (content, options = {}) => {
     const makeRequest = async () => {
+      // Format request body exactly as required
+      const requestBody = {
+        query: content,
+        conversationId: options.conversationId
+      };
+
       const response = await fetchWithToken('/api/chat/standard-conversation', {
         method: 'POST',
-        body: JSON.stringify({
-          conversationId: options.conversationId || null,
-          query: content
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response) {
@@ -100,8 +106,11 @@ export const chatApi = {
     try {
       const response = await retryWithDelay(makeRequest);
       
+      // Log successful response for debugging
+      console.log('Chat response:', response);
+      
       return {
-        response: response.response,
+        response: response.response || response.message,
         message: response.message,
         conversationId: response.conversationId,
         responseId: response.responseId,
@@ -111,7 +120,9 @@ export const chatApi = {
       console.error('Send message failed:', {
         status: error.status,
         message: error.message,
-        data: error.data
+        data: error.data,
+        content,
+        options
       });
       throw error;
     }
@@ -119,7 +130,7 @@ export const chatApi = {
 
   getConversations: async () => {
     try {
-      const response = await fetchWithToken('/api/chat');
+      const response = await fetchWithToken('/api/chat/');
       
       // Check if response exists
       if (!response?.data) {
