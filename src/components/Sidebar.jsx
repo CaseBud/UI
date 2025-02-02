@@ -60,6 +60,27 @@ const Sidebar = ({ user, onSelectPrompt, isTempUser }) => {
           </div>
         </div>
 
+        {/* Landing Page Link - Add this new section */}
+        <div className="mt-6 pt-6 border-t border-slate-700/50">
+          <a 
+            href="https://www.casebud.app" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block p-4 rounded-lg bg-slate-700/30 hover:bg-slate-700/50 transition-colors"
+          >
+            <h3 className="text-white font-semibold mb-1">Get to Know Us Better</h3>
+            <p className="text-sm text-slate-400">
+              Visit our website to learn more about how CaseBud can transform your legal practice.
+            </p>
+            <span className="inline-flex items-center mt-2 text-blue-400 text-sm">
+              Learn more
+              <svg className="w-4 h-4 ml-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </span>
+          </a>
+        </div>
+
         {/* Register Button - Only show when not authenticated */}
         {!isAuthenticated && (
           <div className="mt-4 pt-4 border-t border-slate-700/50">
