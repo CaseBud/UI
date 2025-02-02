@@ -53,6 +53,7 @@ const Chat = () => {
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [isNewConversation, setIsNewConversation] = useState(true);
   const [isIncognito, setIsIncognito] = useState(false); // Add incognito mode state
+  const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
 
   useEffect(() => {
     if (!isIncognito) {
@@ -180,10 +181,11 @@ const Chat = () => {
     if (isIncognito) return;
 
     setUploadedDocuments(prev => [...prev, document]);
-    // Add a system message with the uploaded document
+    setActiveDocuments(prev => [...prev, document.id]); // Add document to active documents
+
     setMessages(prev => [...prev, {
       type: 'system',
-      content: `Document uploaded successfully`,
+      content: 'Document uploaded and ready for analysis. You can now ask questions about this document.',
       document: document,
       timestamp: new Date()
     }]);
@@ -224,9 +226,20 @@ const Chat = () => {
         timestamp: new Date()
       }]);
 
-      const response = await chatApi.sendMessage(content.trim(), { 
-        conversationId: currentconversationId 
-      });
+      let response;
+      
+      // Use document analysis endpoint if there are active documents
+      if (activeDocuments.length > 0) {
+        response = await chatApi.sendDocumentAnalysis(
+          content.trim(),
+          activeDocuments,
+          currentconversationId
+        );
+      } else {
+        response = await chatApi.sendMessage(content.trim(), { 
+          conversationId: currentconversationId 
+        });
+      }
 
       if (isNewConversation && response.conversationId) {
         setCurrentconversationId(response.conversationId);
@@ -319,6 +332,15 @@ const Chat = () => {
     }
   };
 
+  const clearActiveDocuments = () => {
+    setActiveDocuments([]);
+    setMessages(prev => [...prev, {
+      type: 'system',
+      content: 'Switched to general conversation mode',
+      timestamp: new Date()
+    }]);
+  };
+
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
@@ -402,6 +424,22 @@ const Chat = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
               </svg>
             </button>
+            {activeDocuments.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-blue-400">
+                  Document Analysis Mode
+                </span>
+                <button
+                  onClick={clearActiveDocuments}
+                  className="p-1 hover:bg-slate-700/50 rounded-full"
+                  title="Clear active documents"
+                >
+                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -428,42 +466,46 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Input Area */}
-        <div className="border-t border-slate-700/50 bg-slate-800/50 backdrop-blur-sm p-4">
+        {/* Input Area - Updated with better mobile responsiveness */}
+        <div className="border-t border-slate-700/50 bg-slate-800/50 backdrop-blur-sm p-2 sm:p-4">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-            <div className="flex items-end space-x-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    placeholder="Ask any legal question..."
-                    className="w-full rounded-lg pl-4 pr-24 py-3 bg-slate-700/50 border border-slate-600/50 
-                             text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 
-                             focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+            <div className="flex items-end space-x-2 sm:space-x-4">
+              <div className="flex-1 relative">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Ask any legal question..."
+                  className="w-full rounded-lg pl-3 sm:pl-4 pr-24 sm:pr-28 py-2 sm:py-3 bg-slate-700/50 
+                           border border-slate-600/50 text-white placeholder-slate-400 
+                           focus:outline-none focus:border-blue-500 focus:ring-2 
+                           focus:ring-blue-500/20 transition-all duration-200 
+                           text-sm sm:text-base"
+                  disabled={isTyping}
+                />
+                <div className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
+                              flex items-center gap-0.5 sm:gap-1">
+                  <VoiceChat 
+                    onVoiceInput={handleVoiceInput}
                     disabled={isTyping}
+                    className="w-7 h-7 sm:w-8 sm:h-8 p-1.5" 
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-2">
-                    <VoiceChat 
-                      onVoiceInput={handleVoiceInput}
-                      disabled={isTyping}
-                    />
-                    <DocumentUploader 
-                      onDocumentSelect={handleDocumentSelect} 
-                      onUploadComplete={handleUploadComplete}
-                    />
-                    <button 
-                      type="submit"
-                      disabled={isTyping || !message.trim()}
-                      className="rounded-md p-2 text-slate-400 hover:text-white disabled:opacity-50
-                                disabled:cursor-not-allowed transition-all duration-200"
-                    >
-                      <IconComponents.Send className="w-5 h-5" />
-                    </button>
-                  </div>
+                  <DocumentUploader 
+                    onDocumentSelect={handleDocumentSelect} 
+                    onUploadComplete={handleUploadComplete}
+                    className="w-7 h-7 sm:w-8 sm:h-8 p-1.5"
+                  />
+                  <button 
+                    type="submit"
+                    disabled={isTyping || !message.trim()}
+                    className="rounded-md p-1.5 sm:p-2 text-slate-400 hover:text-white 
+                              disabled:opacity-50 disabled:cursor-not-allowed 
+                              transition-all duration-200"
+                  >
+                    <IconComponents.Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </button>
                 </div>
               </div>
             </div>
