@@ -52,17 +52,19 @@ const Chat = () => {
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [isNewConversation, setIsNewConversation] = useState(true);
+  const [isDocumentAnalysis, setIsDocumentAnalysis] = useState(false);
+  const [documentAnalysisId, setDocumentAnalysisId] = useState(null);
   const [isIncognito, setIsIncognito] = useState(false); // Add incognito mode state
   const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
 
   useEffect(() => {
-    if (!isIncognito) {
+    if (!isIncognito && isHistoryOpen) {
       fetchConversations();
       // Set up periodic refresh every 30 seconds
       const refreshInterval = setInterval(fetchConversations, 30000);
       return () => clearInterval(refreshInterval);
     }
-  }, [isIncognito]);
+  }, [isIncognito, isHistoryOpen]);
 
   const fetchConversations = async () => {
     try {
@@ -79,8 +81,15 @@ const Chat = () => {
 
     try {
       const conversation = await chatApi.getConversationById(conversationId);
+      if (conversation.type === 'document-analysis') {
+        setDocumentAnalysisId(conversation._id);
+        setIsDocumentAnalysis(true);
+      } else {
+        setDocumentAnalysisId(null);
+        setIsDocumentAnalysis(false);
+        setCurrentconversationId(conversation._id);
+      }
       setMessages(conversation.messages);
-      setCurrentconversationId(conversationId);
       setIsNewConversation(false);
     } catch (error) {
       console.error('Failed to fetch chat:', error);
@@ -138,7 +147,7 @@ const Chat = () => {
     setIsTyping(true);
     const characters = response.split('');
     let currentText = '';
-    const charDelay = 15; // Decrease for faster typing
+    const charDelay = 7; // Decrease for faster typing
     const variation = 10; // Decrease for less variation in typing speed
     
     try {
@@ -177,11 +186,11 @@ const Chat = () => {
     });
   };
 
-  const handleUploadComplete = (document) => {
+  const handleUploadComplete = (response) => {
     if (isIncognito) return;
-
+    const document = response.data.document;
     console.log('Uploaded document details:', {
-      id: document.id,
+      id: document._id,
       name: document.name,
       type: document.type,
       size: document.size
@@ -189,10 +198,11 @@ const Chat = () => {
 
     setUploadedDocuments(prev => [...prev, document]);
     setActiveDocuments(prev => {
-      const newActiveDocuments = [...prev, document.id];
+      const newActiveDocuments = [...prev, document._id];
       console.log('Active document IDs:', JSON.stringify(newActiveDocuments));
       return newActiveDocuments;
     });
+    setIsDocumentAnalysis(true);
 
     setMessages(prev => [...prev, {
       type: 'system',
@@ -232,25 +242,28 @@ const Chat = () => {
 
       let response;
       
-      if (activeDocuments.length > 0) {
-        console.log('Sending document analysis request:', {
-          content,
-          documentIds: JSON.stringify(activeDocuments),
-          activeDocumentsArray: activeDocuments,
-          conversationId: currentconversationId
-        });
+      if (isDocumentAnalysis) {
+      console.log('Sending document analysis request:', {
+        content,
+        documentIds: JSON.stringify(activeDocuments),
+        activeDocumentsArray: activeDocuments,
+        conversationId: documentAnalysisId
+      });
 
-        try {
-          response = await chatApi.sendDocumentAnalysis(
-            content.trim(),
-            activeDocuments,
-            currentconversationId
-          );
-          console.log('Document analysis response:', response); // Add this log
-          
-          if (!response) {
-            throw new Error('No response from document analysis');
-          }
+      try {
+        response = await chatApi.sendDocumentAnalysis(
+        content.trim(),
+        activeDocuments.length > 0 ? activeDocuments : null,
+        documentAnalysisId
+        );
+        console.log('Document analysis response:', response); // Add this log
+        
+        if (!response) {
+        throw new Error('No response from document analysis');
+        }
+        setActiveDocuments([]); // Clear documents
+        setDocumentAnalysisId(response.conversationId);
+
         } catch (docError) {
           console.error('Document analysis error details:', docError); // Enhanced error log
           setMessages(prev => [...prev, {
@@ -360,6 +373,8 @@ const Chat = () => {
       setMessage('');
       setSelectedDocuments([]);
       setUploadedDocuments([]);
+      setDocumentAnalysisId(null);
+      setIsDocumentAnalysis(false);
     }
   };
 
@@ -479,7 +494,7 @@ const Chat = () => {
           <div className="max-w-3xl mx-auto space-y-6">
             {messages.map((msg, index) => (
               <MessageBubble 
-                key={`${msg.type}-${index}-${msg.timestamp?.getTime()}`}
+                key={`${msg.type}-${index}}`}
                 message={msg}
               />
             ))}
