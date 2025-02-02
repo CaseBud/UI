@@ -177,13 +177,13 @@ const Chat = () => {
   };
 
   const handleUploadComplete = (document) => {
-    if (isIncognito) return; // Disable document upload in incognito mode
+    if (isIncognito) return;
 
     setUploadedDocuments(prev => [...prev, document]);
-    // Add a system message about the upload
+    // Add a system message with the uploaded document
     setMessages(prev => [...prev, {
       type: 'system',
-      content: `Document "${document.name}" has been uploaded.`,
+      content: `Document uploaded successfully`,
       document: document,
       timestamp: new Date()
     }]);
@@ -342,9 +342,12 @@ const Chat = () => {
             : 'bg-slate-700/50 backdrop-blur-sm text-slate-100'
         }`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-          {message.document && message.document.name && (
+          
+          {/* Document Preview */}
+          {message.document && (
             <DocumentPreview document={message.document} />
           )}
+          
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">
               {new Date(message.timestamp).toLocaleTimeString()}
