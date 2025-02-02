@@ -1,16 +1,14 @@
-import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { authService } from '../services/authService';
+import React, { useState } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
-  const navigate = useNavigate()
-  const [credentials, setCredentials] = useState({
-    email: '',
-    password: ''
-  })
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,24 +16,15 @@ const Login = () => {
     
     setIsLoading(true);
     setError('');
-    setSuccess(false);
 
     try {
-      const response = await authService.login({
-        email: credentials.email.trim(),
-        password: credentials.password
-      });
-
-      if (response && response.token) {
-        setSuccess(true);
-        // Add a short delay to show success message
-        await new Promise(resolve => setTimeout(resolve, 500));
-        navigate('/chat', { replace: true });
-      }
+      await login(credentials);
+      // Redirect to the page user tried to visit or to chat
+      const from = location.state?.from?.pathname || '/chat';
+      navigate(from, { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
-      authService.logout();
+      setError(err.message || 'Failed to login. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -116,17 +105,6 @@ const Login = () => {
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
                 </svg>
                 {error}
-              </div>
-            </div>
-          )}
-
-          {success && (
-            <div className="animate-fadeIn rounded-lg bg-green-500/10 p-4 text-sm text-green-400 border border-green-500/20">
-              <div className="flex items-center">
-                <svg className="mr-2 h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                </svg>
-                Login successful! Redirecting to chat...
               </div>
             </div>
           )}

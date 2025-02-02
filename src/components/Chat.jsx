@@ -52,29 +52,16 @@ const Chat = () => {
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [isNewConversation, setIsNewConversation] = useState(true);
+  const [isIncognito, setIsIncognito] = useState(false); // Add incognito mode state
 
   useEffect(() => {
-    // Scroll to bottom when messages update
-    if (chatContainerRef.current) {
-      const scrollOptions = {
-        behavior: 'smooth',
-        block: 'end'
-      };
-      chatContainerRef.current.scrollIntoView(scrollOptions);
+    if (!isIncognito) {
+      fetchConversations();
+      // Set up periodic refresh every 30 seconds
+      const refreshInterval = setInterval(fetchConversations, 30000);
+      return () => clearInterval(refreshInterval);
     }
-  }, [messages]);
-
-  // Focus input on mount
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  useEffect(() => {
-    fetchConversations();
-    // Set up periodic refresh every 30 seconds
-    const refreshInterval = setInterval(fetchConversations, 30000);
-    return () => clearInterval(refreshInterval);
-  }, []);
+  }, [isIncognito]);
 
   const fetchConversations = async () => {
     try {
@@ -87,6 +74,8 @@ const Chat = () => {
   };
 
   const handleSelectChat = async (conversationId) => {
+    if (isIncognito) return; // Disable chat selection in incognito mode
+
     try {
       const conversation = await chatApi.getConversationById(conversationId);
       setMessages(conversation.messages);
@@ -104,6 +93,8 @@ const Chat = () => {
   };
 
   const handleDeleteChat = async (conversationId) => {
+    if (isIncognito) return; // Disable chat deletion in incognito mode
+
     try {
       await fetch(`https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`, {
         method: 'DELETE',
@@ -122,6 +113,8 @@ const Chat = () => {
   };
 
   const handleEditTitle = async (conversationId, newTitle) => {
+    if (isIncognito) return; // Disable chat title editing in incognito mode
+
     try {
       await fetch(`https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`, {
         method: 'PUT',
@@ -144,14 +137,13 @@ const Chat = () => {
     setIsTyping(true);
     const characters = response.split('');
     let currentText = '';
-    const charDelay = 30; // Adjust for faster/slower typing
+    const charDelay = 15; // Decrease for faster typing
+    const variation = 10; // Decrease for less variation in typing speed
     
     try {
       for (let i = 0; i < characters.length; i++) {
         await new Promise(resolve => setTimeout(resolve, charDelay));
-        // Add small random variation to typing speed
-        const variation = Math.random() * 20;
-        await new Promise(resolve => setTimeout(resolve, variation));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * variation));
         
         currentText += characters[i];
         setMessages(prev => {
@@ -167,7 +159,7 @@ const Chat = () => {
 
         // Add slight pause at punctuation marks
         if (['.', '?', '!', ',', ';'].includes(characters[i])) {
-          await new Promise(resolve => setTimeout(resolve, 150));
+          await new Promise(resolve => setTimeout(resolve, 75)); // Decrease pause duration
         }
       }
     } finally {
@@ -176,6 +168,8 @@ const Chat = () => {
   };
 
   const handleDocumentSelect = (docId) => {
+    if (isIncognito) return; // Disable document selection in incognito mode
+
     setSelectedDocuments(prev => {
       const isSelected = prev.includes(docId);
       return isSelected ? prev.filter(id => id !== docId) : [...prev, docId];
@@ -183,66 +177,70 @@ const Chat = () => {
   };
 
   const handleUploadComplete = (document) => {
+    if (isIncognito) return;
+
     setUploadedDocuments(prev => [...prev, document]);
-    // Add a system message about the upload
+    // Add a system message with the uploaded document
     setMessages(prev => [...prev, {
       type: 'system',
-      content: `Document "${document.name}" has been uploaded.`,
+      content: `Document uploaded successfully`,
       document: document,
       timestamp: new Date()
     }]);
   };
 
+  // Ensure document analysis chat sets conversationId to null when starting a new document chat
+  const handleDocumentAnalysis = async (query, documentIds) => {
+    if (isIncognito) return; // Disable document analysis in incognito mode
+
+    try {
+      setCurrentconversationId(null); // Reset conversationId for new document chat
+      const response = await chatApi.sendDocumentAnalysis(query, documentIds);
+      await showResponseGradually(response.response || 'No response received');
+    } catch (error) {
+      console.error('Document analysis error:', error);
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: error.message || 'Failed to analyze document. Please try again.',
+        timestamp: new Date()
+      }]);
+    }
+  };
+
   const sendMessage = async (content) => {
-    if (!content.trim() || isTyping) return;
+    if (!content?.trim() || isTyping) return;
 
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
 
     try {
       setMessages(prev => [...prev, newUserMessage]);
-      setMessage(''); // Clear input immediately for better UX
+      setMessage('');
+      setIsTyping(true); // Start typing animation immediately
 
-      // Add empty assistant message first
+      // Add empty assistant message that will be filled gradually
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: '',
         timestamp: new Date()
       }]);
 
-      // Use document analysis endpoint if documents are selected
-      const response = selectedDocuments.length > 0
-        ? await chatApi.sendDocumentAnalysis(content, selectedDocuments, currentconversationId)
-        : await chatApi.sendMessage(content, { 
-            conversationId: currentconversationId 
-          });
+      const response = await chatApi.sendMessage(content.trim(), { 
+        conversationId: currentconversationId 
+      });
 
-      if (!response?.response && !response?.message) {
-        throw new Error('Empty response from server');
-      }
-
-      // Update conversation ID if this is a new conversation
       if (isNewConversation && response.conversationId) {
         setCurrentconversationId(response.conversationId);
         setIsNewConversation(false);
-        await fetchConversations(); // Refresh conversation list
       }
 
-      // Show response gradually
-      await showResponseGradually(response.response || response.message);
+      await showResponseGradually(response.response || 'No response received');
 
     } catch (error) {
       console.error('Chat error:', error);
-      let errorMessage = 'Failed to send message. Please try again.';
-      
-      if (error.status === 500) {
-        errorMessage = 'The AI service is temporarily unavailable. Please try again in a few moments.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      setIsTyping(false); // Ensure typing animation stops on error
       setMessages(prev => [...prev, {
         type: 'error',
-        content: errorMessage,
+        content: error.message || 'Failed to send message. Please try again.',
         timestamp: new Date()
       }]);
     }
@@ -266,6 +264,8 @@ const Chat = () => {
   };
 
   const createNewChat = async () => {
+    if (isIncognito) return; // Disable new chat creation in incognito mode
+
     try {
       // First, save the current chat if it exists and has messages
       if (messages.length > 1) { // More than just the initial greeting
@@ -302,6 +302,23 @@ const Chat = () => {
     setMessage(text);
   };
 
+  const toggleIncognitoMode = () => {
+    setIsIncognito(!isIncognito);
+    if (!isIncognito) {
+      // Clear current chat state when entering incognito mode
+      setMessages([{
+        type: 'assistant',
+        content: defaultGreeting,
+        timestamp: new Date()
+      }]);
+      setCurrentconversationId(null);
+      setIsNewConversation(true);
+      setMessage('');
+      setSelectedDocuments([]);
+      setUploadedDocuments([]);
+    }
+  };
+
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
@@ -325,9 +342,12 @@ const Chat = () => {
             : 'bg-slate-700/50 backdrop-blur-sm text-slate-100'
         }`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-          {message.document && message.document.name && (
+          
+          {/* Document Preview */}
+          {message.document && (
             <DocumentPreview document={message.document} />
           )}
+          
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -367,14 +387,22 @@ const Chat = () => {
               <p className="text-sm text-slate-400">AI-powered legal research and analysis</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-            className="ml-4 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
-          >
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleIncognitoMode}
+              className={`ml-4 p-2 rounded-lg ${isIncognito ? 'bg-red-600' : 'bg-slate-700/50'} hover:bg-slate-600/50 transition-colors`}
+            >
+              {isIncognito ? 'Exit Incognito' : 'Incognito Mode'}
+            </button>
+            <button
+              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+              className="ml-4 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
+            >
+              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Messages */}

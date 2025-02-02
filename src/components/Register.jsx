@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/authService';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     fullName: '',
@@ -55,38 +58,30 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    
-    if (!validateForm()) {
-      setError('Please fix the errors in the form');
-      return;
-    }
+    if (!validateForm()) return;
 
     setIsLoading(true);
+    setError('');
 
     try {
-      const response = await fetch('https://case-bud-backend.onrender.com/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          fullName: formData.fullName,
-          password: formData.password
-        })
+      // First register the user
+      await authService.register({
+        email: formData.email,
+        fullName: formData.fullName,
+        password: formData.password
       });
 
-      const data = await response.json();
+      // Then login automatically
+      await login({
+        email: formData.email,
+        password: formData.password
+      });
 
-      if (response.ok) {
-        localStorage.setItem('pendingVerificationEmail', formData.email);
-        navigate('/verify-otp', { state: { email: formData.email } });
-      } else {
-        setError(data.message || 'Registration failed. Please try again.');
-      }
+      // Redirect to chat page
+      navigate('/chat', { replace: true });
     } catch (err) {
-      setError('Network error. Please check your connection and try again.');
+      console.error('Registration error:', err);
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
