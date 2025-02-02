@@ -180,8 +180,19 @@ const Chat = () => {
   const handleUploadComplete = (document) => {
     if (isIncognito) return;
 
+    console.log('Uploaded document details:', {
+      id: document.id,
+      name: document.name,
+      type: document.type,
+      size: document.size
+    });
+
     setUploadedDocuments(prev => [...prev, document]);
-    setActiveDocuments(prev => [...prev, document.id]); // Add document to active documents
+    setActiveDocuments(prev => {
+      const newActiveDocuments = [...prev, document.id];
+      console.log('Active document IDs:', JSON.stringify(newActiveDocuments));
+      return newActiveDocuments;
+    });
 
     setMessages(prev => [...prev, {
       type: 'system',
@@ -224,7 +235,8 @@ const Chat = () => {
       if (activeDocuments.length > 0) {
         console.log('Sending document analysis request:', {
           content,
-          documentIds: activeDocuments,
+          documentIds: JSON.stringify(activeDocuments),
+          activeDocumentsArray: activeDocuments,
           conversationId: currentconversationId
         });
 
@@ -234,12 +246,13 @@ const Chat = () => {
             activeDocuments,
             currentconversationId
           );
+          console.log('Document analysis response:', response); // Add this log
           
           if (!response) {
             throw new Error('No response from document analysis');
           }
         } catch (docError) {
-          console.error('Document analysis error:', docError);
+          console.error('Document analysis error details:', docError); // Enhanced error log
           setMessages(prev => [...prev, {
             type: 'error',
             content: 'Document analysis failed. Falling back to standard chat.',
