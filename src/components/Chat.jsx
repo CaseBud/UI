@@ -217,43 +217,61 @@ const Chat = () => {
     try {
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
-      setIsTyping(true); // Start typing animation immediately
-
-      // Add empty assistant message that will be filled gradually
-      setMessages(prev => [...prev, {
-        type: 'assistant',
-        content: '',
-        timestamp: new Date()
-      }]);
+      setIsTyping(true);
 
       let response;
       
-      // Use document analysis endpoint if there are active documents
       if (activeDocuments.length > 0) {
-        response = await chatApi.sendDocumentAnalysis(
-          content.trim(),
-          activeDocuments,
-          currentconversationId
-        );
+        console.log('Sending document analysis request:', {
+          content,
+          documentIds: activeDocuments,
+          conversationId: currentconversationId
+        });
+
+        try {
+          response = await chatApi.sendDocumentAnalysis(
+            content.trim(),
+            activeDocuments,
+            currentconversationId
+          );
+          
+          if (!response) {
+            throw new Error('No response from document analysis');
+          }
+        } catch (docError) {
+          console.error('Document analysis error:', docError);
+          setMessages(prev => [...prev, {
+            type: 'error',
+            content: 'Document analysis failed. Falling back to standard chat.',
+            timestamp: new Date()
+          }]);
+          
+          // Fallback to standard conversation
+          response = await chatApi.sendMessage(content.trim(), { 
+            conversationId: currentconversationId 
+          });
+        }
       } else {
         response = await chatApi.sendMessage(content.trim(), { 
           conversationId: currentconversationId 
         });
       }
 
-      if (isNewConversation && response.conversationId) {
-        setCurrentconversationId(response.conversationId);
-        setIsNewConversation(false);
-      }
+      // Add empty assistant message
+      setMessages(prev => [...prev, {
+        type: 'assistant',
+        content: '',
+        timestamp: new Date()
+      }]);
 
       await showResponseGradually(response.response || 'No response received');
 
     } catch (error) {
       console.error('Chat error:', error);
-      setIsTyping(false); // Ensure typing animation stops on error
+      setIsTyping(false);
       setMessages(prev => [...prev, {
         type: 'error',
-        content: error.message || 'Failed to send message. Please try again.',
+        content: error.message || 'Failed to process your request.',
         timestamp: new Date()
       }]);
     }

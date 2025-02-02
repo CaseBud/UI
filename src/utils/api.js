@@ -184,16 +184,42 @@ export const chatApi = {
   sendDocumentAnalysis: (query) => chatApi.sendMessage(query),
 
   sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
-    const response = await fetchWithToken('/api/chat/document-analysis', {
-      method: 'POST',
-      body: JSON.stringify({
+    try {
+      // Updated endpoint path
+      const response = await fetchWithToken('/api/chat/document-analysis', {
+        method: 'POST',
+        body: JSON.stringify({
+          query,
+          document_ids: documentIds, // Note: using snake_case for consistency
+          conversation_id: conversationId
+        })
+      });
+
+      console.log('Document Analysis Request:', {
+        query,
+        document_ids: documentIds,
+        conversation_id: conversationId
+      });
+
+      if (!response) {
+        throw new Error('No response from server');
+      }
+
+      return {
+        response: response.response || response.message,
+        message: response.message,
+        conversationId: response.conversation_id,
+        responseId: response.response_id
+      };
+    } catch (error) {
+      console.error('Document analysis failed:', {
+        error,
         query,
         documentIds,
         conversationId
-      })
-    });
-
-    return response;
+      });
+      throw error;
+    }
   },
 
   createNewChat: async (title, messages) => {
@@ -215,27 +241,6 @@ export const chatApi = {
       console.error('Failed to create new chat:', error);
       throw error;
     }
-  },
-
-  sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
-    const response = await fetch('https://your-api-base-url/api/chat/document-analysis', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authService.getToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        conversationId,
-        documentIds,
-        query,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to analyze documents');
-    }
-
-    return response.json();
   },
 };
 
