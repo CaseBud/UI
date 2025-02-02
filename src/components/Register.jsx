@@ -64,21 +64,21 @@ const Register = () => {
     setError('');
 
     try {
-      // First register the user
-      await authService.register({
+      // Register the user
+      const response = await authService.register({
         email: formData.email,
         fullName: formData.fullName,
         password: formData.password
       });
 
-      // Then login automatically
-      await login({
-        email: formData.email,
-        password: formData.password
+      // Navigate to OTP verification with email
+      navigate('/verify-otp', { 
+        state: { 
+          email: formData.email,
+          message: 'Please check your email for the verification code.'
+        },
+        replace: true 
       });
-
-      // Redirect to chat page
-      navigate('/chat', { replace: true });
     } catch (err) {
       console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');

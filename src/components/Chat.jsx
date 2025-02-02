@@ -7,6 +7,7 @@ import TypingAnimation from './TypingAnimation';  // Ensure this import is corre
 import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
 import VoiceChat from './VoiceChat';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -37,6 +38,9 @@ const IconComponents = {
 const Chat = () => {
   const user = authService.getCurrentUser();
   const defaultGreeting = `Hello ${user?.name || ''}! How can I help you today?`;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isTempUser = location.state?.tempUser || false;
 
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([{
@@ -387,6 +391,10 @@ const Chat = () => {
     }]);
   };
 
+  const handleRegister = () => {
+    navigate('/register');
+  };
+
   const MessageBubble = ({ message }) => {
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
@@ -438,6 +446,7 @@ const Chat = () => {
       <Sidebar 
         user={user} 
         onSelectPrompt={handleSelectPrompt}
+        isTempUser={isTempUser}
       />
 
       {/* Main Chat Area */}
@@ -456,6 +465,14 @@ const Chat = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
+            {isTempUser && (
+              <button
+                onClick={handleRegister}
+                className="ml-4 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              >
+                Register
+              </button>
+            )}
             <button
               onClick={toggleIncognitoMode}
               className={`ml-4 p-2 rounded-lg ${isIncognito ? 'bg-red-600' : 'bg-slate-700/50'} hover:bg-slate-600/50 transition-colors`}
@@ -523,29 +540,30 @@ const Chat = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Ask any legal question..."
+                  placeholder={isTempUser ? "Register to start chatting..." : "Ask any legal question..."}
                   className="w-full rounded-lg pl-3 sm:pl-4 pr-24 sm:pr-28 py-2 sm:py-3 bg-slate-700/50 
                            border border-slate-600/50 text-white placeholder-slate-400 
                            focus:outline-none focus:border-blue-500 focus:ring-2 
                            focus:ring-blue-500/20 transition-all duration-200 
                            text-sm sm:text-base"
-                  disabled={isTyping}
+                  disabled={isTyping || isTempUser}
                 />
                 <div className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
                               flex items-center gap-0.5 sm:gap-1">
                   <VoiceChat 
                     onVoiceInput={handleVoiceInput}
-                    disabled={isTyping}
+                    disabled={isTyping || isTempUser}
                     className="w-7 h-7 sm:w-8 sm:h-8 p-1.5" 
                   />
                   <DocumentUploader 
                     onDocumentSelect={handleDocumentSelect} 
                     onUploadComplete={handleUploadComplete}
                     className="w-7 h-7 sm:w-8 sm:h-8 p-1.5"
+                    disabled={isTempUser}
                   />
                   <button 
                     type="submit"
-                    disabled={isTyping || !message.trim()}
+                    disabled={isTyping || !message.trim() || isTempUser}
                     className="rounded-md p-1.5 sm:p-2 text-slate-400 hover:text-white 
                               disabled:opacity-50 disabled:cursor-not-allowed 
                               transition-all duration-200"
