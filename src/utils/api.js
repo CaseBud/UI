@@ -216,6 +216,27 @@ export const chatApi = {
       throw error;
     }
   },
+
+  sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
+    const response = await fetch('https://your-api-base-url/api/chat/document-analysis', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authService.getToken()}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        conversationId,
+        documentIds,
+        query,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to analyze documents');
+    }
+
+    return response.json();
+  },
 };
 
 export const documentsApi = {
