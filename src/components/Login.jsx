@@ -180,10 +180,10 @@ const Login = () => {
             </Link>
             <br />
             <Link 
-              to="/" 
+              to="/forgot-password" // Change from "/" to "/forgot-password"
               className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
             >
-              Forgot Password? 
+              Forgot Password?
             </Link>
           </p>
 
