@@ -1,64 +1,58 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false); // Changed to false since we're not waiting for verify
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Add console logs to debug authentication state
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    console.log('Auth Check:', { token, storedUser });
-    
-    if (token && storedUser) {
+    // Check for existing auth session
+    const initAuth = async () => {
       try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        console.log('User authenticated:', userData);
+        const currentUser = authService.getCurrentUser();
+        setUser(currentUser);
       } catch (error) {
-        console.error('Failed to parse stored user data:', error);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+
+    initAuth();
   }, []);
 
-  const login = (userData, token) => {
-    console.log('Login called with:', { userData, token });
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+  const login = async (credentials) => {
+    const user = await authService.login(credentials);
+    setUser(user);
+    return user;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('conversationId');
+    authService.logout();
     setUser(null);
-    navigate('/login');
   };
 
-  // For development/testing - add this function
-  const debugLogin = () => {
-    const testUser = {
-      id: 'test-id',
-      fullName: 'Test User',
-      email: 'test@example.com'
-    };
-    const testToken = 'test-token';
-    login(testUser, testToken);
-    console.log('Debug login executed');
+  const value = {
+    user,
+    login,
+    logout,
+    loading,
+    isAuthenticated: !!user
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading, debugLogin }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
