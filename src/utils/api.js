@@ -134,19 +134,18 @@ export const chatApi = {
   getConversations: async () => {
     try {
       const response = await fetchWithToken('/api/chat/');
-      
+
       // Check if response exists
-      if (!response?.data) {
+      if (!response?.conversations) {
         console.warn('No data in response');
         return [];
       }
 
-      return response.data.map(conv => ({
-        id: conv.id,
+      return response.conversations.map(conv => ({
+        id: conv._id,
         title: conv.title,
-        created_at: conv.created_at,
-        updated_at: conv.updated_at,
-        message_count: conv.messages?.length || 0
+        created_at: conv.createdAt,
+        updated_at: conv.updatedAt,
       }));
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
@@ -158,17 +157,20 @@ export const chatApi = {
     try {
       const response = await fetchWithToken(`/api/chat/${conversationId}/`);
       
-      if (!response?.data) {
+      if (!response?.conversation) {
         throw new Error('No conversation data found');
       }
 
       return {
-        ...response.data,
-        messages: response.data.messages.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          type: msg.role === 'user' ? 'user' : 'assistant',
-          timestamp: msg.created_at
+        ...response.conversation,
+        messages: response.messages.map(msg => ({
+          id: msg._id,
+          content: msg.response,
+          // {
+          //   query: msg.query,
+          //   response: msg.response
+          // },
+          timestamp: msg.createdAt
         }))
       };
     } catch (error) {
@@ -190,15 +192,15 @@ export const chatApi = {
         method: 'POST',
         body: JSON.stringify({
           query,
-          document_ids: documentIds, // Note: using snake_case for consistency
-          conversation_id: conversationId
+          documentIds: documentIds, // Note: using snake_case for consistency
+          conversationId: conversationId
         })
       });
 
       console.log('Document Analysis Request:', {
         query,
-        document_ids: documentIds,
-        conversation_id: conversationId
+        documentIds: documentIds,
+        conversationId: conversationId
       });
 
       if (!response) {
@@ -208,8 +210,8 @@ export const chatApi = {
       return {
         response: response.response || response.message,
         message: response.message,
-        conversationId: response.conversation_id,
-        responseId: response.response_id
+        conversationId: response.conversationId,
+        title: response.title
       };
     } catch (error) {
       console.error('Document analysis failed:', {

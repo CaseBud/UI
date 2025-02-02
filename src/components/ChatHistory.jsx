@@ -187,7 +187,7 @@ const ChatHistory = ({
                     )}
                   </div>
                   <div className="text-xs text-slate-400 mt-1">
-                    {chat.message_count} messages · {formatDate(chat.created_at)}
+                    {formatDate(chat.created_at)}
                   </div>
                 </div>
               ))}
