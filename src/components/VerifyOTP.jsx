@@ -63,7 +63,7 @@ const VerifyOTP = () => {
     setError('');
 
     try {
-      const response = await fetch('https://case-bud-backend.onrender.com/api/auth/verify-email', {
+      const response = await fetch('https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/auth/verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
