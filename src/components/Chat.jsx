@@ -31,7 +31,14 @@ const IconComponents = {
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
     </svg>
-  )
+  ),
+  Globe: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+  ),
 };
 
 
@@ -61,6 +68,7 @@ const Chat = () => {
   const [documentAnalysisId, setDocumentAnalysisId] = useState(null);
   const [isIncognito, setIsIncognito] = useState(false); // Add incognito mode state
   const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
+  const [isWebMode, setIsWebMode] = useState(false); // Add new state for web browsing mode
 
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
@@ -246,7 +254,32 @@ const Chat = () => {
       setIsTyping(true);
 
       let response;
-      
+      //!
+      //TODO: Implement actual logic when Olu deploys endpoint
+      // Add this condition for web search mode
+      if (isWebMode) {
+        response = await chatApi.sendWebSearch(content.trim(), {
+          conversationId: currentconversationId
+        });
+        
+        // If the response includes web sources, add them to the message
+        const webResponse = {
+          response: response.response,
+          sources: response.sources
+        };
+        
+        setMessages(prev => [...prev, {
+          type: 'assistant',
+          content: '',
+          webSources: response.sources,
+          timestamp: new Date()
+        }]);
+        
+        await showResponseGradually(response.response);
+        return;
+      }
+
+      // Existing document analysis and standard chat logic
       if (isDocumentAnalysis) {
       console.log('Sending document analysis request:', {
         content,
@@ -460,6 +493,26 @@ const Chat = () => {
           {/* Document Preview */}
           {message.document && <DocumentPreview document={message.document} />}
           
+          {/* Add this section for web sources */}
+          {message.webSources && message.webSources.length > 0 && (
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-slate-400">Sources:</p>
+              <div className="space-y-1">
+                {message.webSources.map((source, index) => (
+                  <a
+                    key={index}
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-xs text-blue-400 hover:text-blue-300 truncate"
+                  >
+                    {source.title || source.url}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">
               {new Date(message.timestamp).toLocaleTimeString()}
@@ -576,8 +629,8 @@ const Chat = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder={isTempUser ? "Register to start chatting..." : "Ask any legal question..."}
-                  className="w-full rounded-lg pl-3 sm:pl-4 pr-24 sm:pr-28 py-2 sm:py-3 bg-slate-700/50 
+                  placeholder={isTempUser ? "Register to start chatting..." : isWebMode ? "Ask me to search the web..." : "Ask any legal question..."}
+                  className="w-full rounded-lg pl-3 sm:pl-4 pr-32 sm:pr-36 py-2 sm:py-3 bg-slate-700/50 
                            border border-slate-600/50 text-white placeholder-slate-400 
                            focus:outline-none focus:border-blue-500 focus:ring-2 
                            focus:ring-blue-500/20 transition-all duration-200 
@@ -586,6 +639,27 @@ const Chat = () => {
                 />
                 <div className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
                               flex items-center gap-0.5 sm:gap-1">
+                  {/* Web Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setIsWebMode(!isWebMode)}
+                    className={`relative group p-1.5 rounded-lg transition-all duration-200
+                      ${isWebMode 
+                        ? 'bg-blue-500 text-white' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                    disabled={isTempUser}
+                    title={isWebMode ? "Disable web search" : "Enable web search"}
+                  >
+                    <IconComponents.Globe className="w-5 h-5" />
+                    
+                    {/* Tooltip */}
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs 
+                                   text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 
+                                   transition-opacity duration-200 whitespace-nowrap">
+                      {isWebMode ? 'Web search enabled' : 'Enable web search'}
+                    </span>
+                  </button>
+
                   <VoiceChat 
                     onVoiceInput={handleVoiceInput}
                     disabled={isTyping || isTempUser}
@@ -609,6 +683,19 @@ const Chat = () => {
                 </div>
               </div>
             </div>
+
+            {/* Web Search Mode Indicator */}
+            {isWebMode && (
+              <div className="mt-2 text-xs text-center text-blue-400">
+                <span className="inline-flex items-center gap-1">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                  </span>
+                  Web search mode active
+                </span>
+              </div>
+            )}
           </form>
         </div>
       </div>
