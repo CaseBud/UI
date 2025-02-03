@@ -250,7 +250,7 @@ const Chat = () => {
     
     // Get last message for context
     const lastMessage = messages[messages.length - 1];
-    const contextMessages = messages.slice(-3); // Get last 3 messages for context
+    const contextMessages = messages.slice(-3);
   
     try {
       setMessages(prev => [...prev, newUserMessage]);
@@ -260,7 +260,13 @@ const Chat = () => {
       let response;
   
       if (isDocumentAnalysis) {
-        // ...existing document analysis code...
+        response = await chatApi.sendDocumentAnalysis(content.trim(), activeDocuments, documentAnalysisId);
+        // Add empty assistant message for document analysis
+        setMessages(prev => [...prev, {
+          type: 'assistant',
+          content: '',
+          timestamp: new Date()
+        }]);
       } else {
         // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
@@ -274,21 +280,27 @@ const Chat = () => {
             }))
           }
         });
+  
+        // Add empty assistant message with web sources for regular chat
+        setMessages(prev => [...prev, {
+          type: 'assistant',
+          content: '',
+          webSources: response.webSources,
+          context: response.context,
+          timestamp: new Date()
+        }]);
       }
   
-      // Add assistant message
-      setMessages(prev => [...prev, {
-        type: 'assistant',
-        content: '',
-        webSources: response.webSources,
-        context: response.context, // Store context from response if any
-        timestamp: new Date()
-      }]);
-  
-      await showResponseGradually(response.response || 'No response received');
+      await showResponseGradually(response.response || response.message || 'No response received');
   
     } catch (error) {
-      // ...existing error handling code...
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: error.message || 'Failed to process your request.',
+        timestamp: new Date()
+      }]);
     }
   };
   
