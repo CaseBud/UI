@@ -1,6 +1,15 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 
 const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    authService.logout();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <div 
       className={`fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-50 lg:hidden transition-all duration-300 
@@ -68,6 +77,22 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
             ))}
           </div>
         </div>
+
+        {user && (
+          <div className="absolute bottom-[72px] left-0 right-0 p-4 border-t border-slate-700/50">
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                       hover:bg-slate-700/50 text-red-400 hover:text-red-300 transition-colors"
+            >
+              <span>Logout</span>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
+        )}
 
         {user && (
           <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50">

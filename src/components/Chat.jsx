@@ -445,16 +445,20 @@ const Chat = () => {
           {!isUser && !isError && !isSystem && (
             <button
               onClick={handleCopy}
-              className="absolute -right-12 top-2 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 
-                       transition-opacity opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white"
+              className="absolute -right-10 md:-right-12 top-2 p-1.5 md:p-2 rounded-lg 
+                       bg-slate-700/50 hover:bg-slate-600/50 
+                       opacity-0 group-hover:opacity-100 md:group-active:opacity-100
+                       text-slate-400 hover:text-white
+                       focus:opacity-100 touch-none
+                       @media (hover: none) { opacity-100 }"
               title="Copy response"
             >
               {isCopied ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
