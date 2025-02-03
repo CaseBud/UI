@@ -37,7 +37,8 @@ const IconComponents = {
 
 const Chat = () => {
   const user = authService.getCurrentUser();
-  const defaultGreeting = `Hello ${user?.name || ''}! How can I help you today?`;
+  // Create greeting with user's name - update this line
+  const defaultGreeting = `Hello ${user?.fullName || user?.name || 'there'}! How can I help you today?`;
   const location = useLocation();
   const navigate = useNavigate();
   const isTempUser = location.state?.tempUser || false;
