@@ -257,20 +257,21 @@ const Chat = () => {
 
       // For document analysis
       if (isDocumentAnalysis) {
-        // ...existing document analysis code...
+        response = await chatApi.sendDocumentAnalysis(query, documentIds);
       } else {
         // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
-          conversationId: currentconversationId,
-          webSearch: isWebMode // Add webSearch flag
+          // Only pass conversationId if web search is disabled
+          conversationId: isWebMode ? null : currentconversationId,
+          webSearch: isWebMode
         });
       }
 
-      // Add empty assistant message
+      // Add assistant message
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: '',
-        webSources: response.webSources, // Add webSources if they exist
+        webSources: response.webSources,
         timestamp: new Date()
       }]);
 
