@@ -83,6 +83,7 @@ const ChatInterface = () => {
                 }
               </div>
             </div> :
+            //!Default prompts
             <div className="middle h-[80vh] flex items-center flex-col justify-center px-4">
               <h1 className='text-4xl'>CaseBud Legal Assistant</h1>
               <div className="boxes mt-[30px] flex items-center gap-2 flex-wrap justify-center">
@@ -104,6 +105,7 @@ const ChatInterface = () => {
                 </div>
               </div>
             </div>
+            //!default prompts
         }
 
         <div className="bottom w-full flex flex-col items-center fixed bottom-0 pb-4 bg-[#0E0E0E]">

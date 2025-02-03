@@ -396,6 +396,22 @@ const Chat = () => {
   };
 
   const MessageBubble = ({ message }) => {
+    const [isCopied, setIsCopied] = useState(false);
+    const timeoutRef = useRef(null);
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(message.content);
+        setIsCopied(true);
+        
+        // Reset the "Copied!" message after 2 seconds
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+      }
+    };
+
     const isUser = message.type === 'user';
     const isError = message.type === 'error';
     const isSystem = message.type === 'system';
@@ -408,7 +424,7 @@ const Chat = () => {
           </div>
         )}
         
-        <div className={`max-w-2xl rounded-2xl px-4 py-2 ${
+        <div className={`relative group max-w-2xl rounded-2xl px-4 py-2 ${
           isUser 
             ? 'bg-blue-600 text-white ml-12'
             : isError
@@ -419,10 +435,29 @@ const Chat = () => {
         }`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
           
-          {/* Document Preview */}
-          {message.document && (
-            <DocumentPreview document={message.document} />
+          {/* Copy button - only show for assistant messages */}
+          {!isUser && !isError && !isSystem && (
+            <button
+              onClick={handleCopy}
+              className="absolute -right-12 top-2 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 
+                       transition-opacity opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white"
+              title="Copy response"
+            >
+              {isCopied ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                </svg>
+              )}
+            </button>
           )}
+          
+          {/* Document Preview */}
+          {message.document && <DocumentPreview document={message.document} />}
           
           {message.timestamp && (
             <p className="text-xs opacity-70 mt-1">

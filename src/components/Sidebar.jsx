@@ -74,9 +74,13 @@ const Sidebar = ({ user, onSelectPrompt }) => {
               <p>• Ask specific legal questions</p>
               <p>• Provide context when needed</p>
               <p>• Request case law citations</p>
+
+
             </div>
           </div>
         </div>
+
+        
 
         {!isAuthenticated && (
           <div className="p-4">
