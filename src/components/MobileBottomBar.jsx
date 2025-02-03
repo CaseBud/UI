@@ -10,8 +10,8 @@ const MobileBottomBar = ({
 }) => {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t 
-                    border-slate-700/50 lg:hidden">
-      <div className="flex items-center justify-around p-2">
+                    border-slate-700/50 lg:hidden z-10 h-12"> {/* Added h-12 for fixed height */}
+      <div className="flex items-center justify-around h-full"> {/* Added h-full */}
         <button
           onClick={onToggleMenu}
           className="p-3 rounded-lg hover:bg-slate-700/50 transition-colors flex flex-col 

@@ -603,7 +603,7 @@ const Chat = () => {
         {/* Fixed input area for mobile */}
         <div className="fixed bottom-0 left-0 right-0 md:relative border-t 
                       border-slate-700/50 bg-slate-800/95 backdrop-blur-sm 
-                      p-2 md:p-4 pb-16 md:pb-4">
+                      p-2 md:p-4 pb-8 md:pb-4 mb-6 md:mb-0"> {/* Adjusted pb-16 and mb-14 */}
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
             <div className="flex items-end space-x-2">
               <div className="flex-1 relative">
