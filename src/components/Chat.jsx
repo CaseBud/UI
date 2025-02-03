@@ -245,47 +245,53 @@ const Chat = () => {
 
   const sendMessage = async (content) => {
     if (!content?.trim() || isTyping) return;
-
+  
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
-
+    
+    // Get last message for context
+    const lastMessage = messages[messages.length - 1];
+    const contextMessages = messages.slice(-3); // Get last 3 messages for context
+  
     try {
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
       setIsTyping(true);
-
+  
       let response;
-
-      // For document analysis
+  
       if (isDocumentAnalysis) {
         // ...existing document analysis code...
       } else {
         // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
           conversationId: currentconversationId,
-          webSearch: isWebMode // Add webSearch flag
+          webSearch: isWebMode,
+          context: {
+            lastMessage: lastMessage?.content,
+            recentMessages: contextMessages.map(msg => ({
+              role: msg.type,
+              content: msg.content
+            }))
+          }
         });
       }
-
-      // Add empty assistant message
+  
+      // Add assistant message
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: '',
-        webSources: response.webSources, // Add webSources if they exist
+        webSources: response.webSources,
+        context: response.context, // Store context from response if any
         timestamp: new Date()
       }]);
-
+  
       await showResponseGradually(response.response || 'No response received');
-
+  
     } catch (error) {
-      console.error('Chat error:', error);
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        type: 'error',
-        content: error.message || 'Failed to process your request.',
-        timestamp: new Date()
-      }]);
+      // ...existing error handling code...
     }
   };
+  
 
   const handleSubmit = (e) => {
     e.preventDefault();
