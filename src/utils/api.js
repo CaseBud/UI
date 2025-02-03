@@ -91,7 +91,8 @@ export const chatApi = {
       // Format request body exactly as required
       const requestBody = {
         query: content,
-        conversationId: options.conversationId
+        conversationId: options.conversationId,
+        webSearch: options.webSearch || false // Add webSearch flag
       };
 
       const response = await fetchWithToken('/api/chat/standard-conversation', {
@@ -117,7 +118,8 @@ export const chatApi = {
         message: response.message,
         conversationId: response.conversationId,
         responseId: response.responseId,
-        title: response.title
+        title: response.title,
+        webSources: response.webSources // Add webSources to returned object
       };
     } catch (error) {
       console.error('Send message failed:', {
