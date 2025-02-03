@@ -88,11 +88,12 @@ const retryWithDelay = async (fn, retries = MAX_RETRIES) => {
 export const chatApi = {
   sendMessage: async (content, options = {}) => {
     const makeRequest = async () => {
-      // Format request body exactly as required
+      // Format request body with context
       const requestBody = {
         query: content,
         conversationId: options.conversationId,
-        webSearch: options.webSearch || false // Add webSearch flag
+        webSearch: options.webSearch || false,
+        context: options.context || null // Include context in request
       };
 
       const response = await fetchWithToken('/api/chat/standard-conversation', {
@@ -110,16 +111,14 @@ export const chatApi = {
     try {
       const response = await retryWithDelay(makeRequest);
       
-      // Log successful response for debugging
-      console.log('Chat response:', response);
-      
       return {
         response: response.response || response.message,
         message: response.message,
         conversationId: response.conversationId,
         responseId: response.responseId,
         title: response.title,
-        webSources: response.webSources // Add webSources to returned object
+        webSources: response.webSources,
+        context: response.context // Return context from response
       };
     } catch (error) {
       console.error('Send message failed:', {
