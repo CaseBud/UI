@@ -188,31 +188,27 @@ export const chatApi = {
 
   sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
     try {
-      // Updated endpoint path
       const response = await fetchWithToken('/api/chat/document-analysis', {
         method: 'POST',
         body: JSON.stringify({
           query,
-          documentIds: documentIds, // Note: using snake_case for consistency
+          documentIds: documentIds,
           conversationId: conversationId
         })
-      });
-
-      console.log('Document Analysis Request:', {
-        query,
-        documentIds: documentIds,
-        conversationId: conversationId
       });
 
       if (!response) {
         throw new Error('No response from server');
       }
 
+      // Ensure consistent response format
       return {
         response: response.response || response.message,
         message: response.message,
         conversationId: response.conversationId,
-        title: response.title
+        title: response.title,
+        webSources: [], // Empty array for document analysis mode
+        context: response.context || null
       };
     } catch (error) {
       console.error('Document analysis failed:', {

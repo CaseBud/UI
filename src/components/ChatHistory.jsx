@@ -73,9 +73,10 @@ const ChatHistory = ({
   );
 
   return (
-    <div className={`fixed right-0 top-0 h-full bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 
-                    transition-all duration-300 ease-in-out z-50
-                    ${isOpen ? 'w-80 translate-x-0' : 'w-0 translate-x-full'}`}>
+    <div className={`fixed inset-0 bg-slate-800/95 backdrop-blur-sm z-50 
+                    md:static md:w-80 md:bg-transparent
+                    transition-all duration-300 ease-in-out
+                    ${isOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}`}>
       <div className="flex flex-col h-full p-4">
         {/* Header with close button */}
         <div className="flex items-center justify-between mb-4">

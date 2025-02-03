@@ -8,6 +8,8 @@ import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
 import VoiceChat from './VoiceChat';
 import { useLocation, useNavigate } from 'react-router-dom';
+import MobileNav from './MobileNav';
+import MobileBottomBar from './MobileBottomBar';  // Ensure this import is correct
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -69,6 +71,7 @@ const Chat = () => {
   const [isIncognito, setIsIncognito] = useState(false); // Add incognito mode state
   const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
   const [isWebMode, setIsWebMode] = useState(false); // Add new state for web browsing mode
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
@@ -250,7 +253,7 @@ const Chat = () => {
     
     // Get last message for context
     const lastMessage = messages[messages.length - 1];
-    const contextMessages = messages.slice(-3); // Get last 3 messages for context
+    const contextMessages = messages.slice(-3);
   
     try {
       setMessages(prev => [...prev, newUserMessage]);
@@ -260,7 +263,13 @@ const Chat = () => {
       let response;
   
       if (isDocumentAnalysis) {
-        // ...existing document analysis code...
+        response = await chatApi.sendDocumentAnalysis(content.trim(), activeDocuments, documentAnalysisId);
+        // Add empty assistant message for document analysis
+        setMessages(prev => [...prev, {
+          type: 'assistant',
+          content: '',
+          timestamp: new Date()
+        }]);
       } else {
         // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
@@ -274,21 +283,27 @@ const Chat = () => {
             }))
           }
         });
+  
+        // Add empty assistant message with web sources for regular chat
+        setMessages(prev => [...prev, {
+          type: 'assistant',
+          content: '',
+          webSources: response.webSources,
+          context: response.context,
+          timestamp: new Date()
+        }]);
       }
   
-      // Add assistant message
-      setMessages(prev => [...prev, {
-        type: 'assistant',
-        content: '',
-        webSources: response.webSources,
-        context: response.context, // Store context from response if any
-        timestamp: new Date()
-      }]);
-  
-      await showResponseGradually(response.response || 'No response received');
+      await showResponseGradually(response.response || response.message || 'No response received');
   
     } catch (error) {
-      // ...existing error handling code...
+      console.error('Chat error:', error);
+      setIsTyping(false);
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: error.message || 'Failed to process your request.',
+        timestamp: new Date()
+      }]);
     }
   };
   
@@ -381,6 +396,8 @@ const Chat = () => {
     navigate('/register');
   };
 
+  const isMobile = () => window.innerWidth < 768;
+
   const MessageBubble = ({ message }) => {
     const [isCopied, setIsCopied] = useState(false);
     const timeoutRef = useRef(null);
@@ -402,39 +419,46 @@ const Chat = () => {
     const isError = message.type === 'error';
     const isSystem = message.type === 'system';
 
+    // Add message type classes definition
+    const messageTypeClasses = isUser 
+      ? 'bg-blue-600 text-white ml-12'
+      : isError
+      ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+      : isSystem
+      ? 'bg-slate-600/50 text-slate-200'
+      : 'bg-slate-700/50 backdrop-blur-sm text-slate-100';
+
     return (
       <div className={`flex items-end space-x-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
         {!isUser && (
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-            <IconComponents.MessageCircle className="w-5 h-5 text-white" />
+          <div className={`flex-shrink-0 ${isMobile ? 'w-6 h-6' : 'w-8 h-8'} 
+                        rounded-full bg-blue-600 flex items-center justify-center`}>
+            <IconComponents.MessageCircle className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
           </div>
         )}
         
-        <div className={`relative group max-w-2xl rounded-2xl px-4 py-2 ${
-          isUser 
-            ? 'bg-blue-600 text-white ml-12'
-            : isError
-            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-            : isSystem
-            ? 'bg-slate-600/50 text-slate-200'
-            : 'bg-slate-700/50 backdrop-blur-sm text-slate-100'
-        }`}>
+        <div className={`relative group max-w-[85vw] md:max-w-2xl rounded-xl md:rounded-2xl 
+                      px-3 py-1.5 md:px-4 md:py-2 ${messageTypeClasses}`}>
           <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
           
           {/* Copy button - only show for assistant messages */}
           {!isUser && !isError && !isSystem && (
             <button
               onClick={handleCopy}
-              className="absolute -right-12 top-2 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 
-                       transition-opacity opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white"
+              className="absolute -right-10 md:-right-12 top-2 p-1.5 md:p-2 rounded-lg 
+                       bg-slate-700/50 hover:bg-slate-600/50 
+                       opacity-0 group-hover:opacity-100 md:group-active:opacity-100
+                       text-slate-400 hover:text-white
+                       focus:opacity-100 touch-none
+                       @media (hover: none) { opacity-100 }"
               title="Copy response"
             >
               {isCopied ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                 </svg>
@@ -473,8 +497,9 @@ const Chat = () => {
         </div>
 
         {isUser && (
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
-            <IconComponents.User className="w-5 h-5 text-white" />
+          <div className={`flex-shrink-0 ${isMobile ? 'w-6 h-6' : 'w-8 h-8'} 
+                        rounded-full bg-slate-600 flex items-center justify-center`}>
+            <IconComponents.User className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-white`} />
           </div>
         )}
       </div>
@@ -482,98 +507,109 @@ const Chat = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800">
-      {/* Import Sidebar */}
-      <Sidebar 
-        user={user} 
+    <div className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800 overflow-hidden">
+      {/* Sidebar - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar 
+          user={user} 
+          onSelectPrompt={handleSelectPrompt}
+          isTempUser={isTempUser}
+        />
+      </div>
+
+      {/* Mobile Navigation */}
+      <MobileNav
+        user={user}
         onSelectPrompt={handleSelectPrompt}
         isTempUser={isTempUser}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
+      <div className="flex-1 flex flex-col h-full relative">
+        {/* Mobile-optimized header */}
+        <div className="flex items-center justify-between px-4 py-2 md:px-6 md:py-4 
+                      border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-            <svg className="h-6 w-6 text-black-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="md:hidden p-2 hover:bg-slate-700/50 rounded-lg"
+            >
+              <svg className="w-5 h-5 text-slate-400" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                      d="M4 6h16M4 12h16M4 18h7" />
               </svg>
-            </div>
-            <div>
-              <h1 className="text-xl font-semibold text-white">Legal Assistant</h1>
-              <p className="text-sm text-slate-400">AI-powered legal research and analysis</p>
+            </button>
+
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br 
+                            from-blue-500 to-blue-600 flex items-center justify-center">
+                <IconComponents.MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-semibold text-white">Legal Assistant</h1>
+                <p className="text-xs md:text-sm text-slate-400 hidden sm:block">
+                  AI-powered legal research
+                </p>
+              </div>
             </div>
           </div>
-          <div className="flex items-center space-x-4">
+
+          {/* Mobile action buttons */}
+          <div className="flex items-center space-x-2 md:space-x-4">
             {isTempUser && (
               <button
                 onClick={handleRegister}
-                className="ml-4 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                className="text-sm md:text-base px-3 py-1.5 md:px-4 md:py-2 rounded-lg 
+                         bg-blue-500 text-white hover:bg-blue-600 transition-colors"
               >
                 Register
               </button>
             )}
             <button
               onClick={toggleIncognitoMode}
-              className={`ml-4 p-2 rounded-lg ${isIncognito ? 'bg-red-600' : 'bg-slate-700/50'} hover:bg-slate-600/50 transition-colors`}
+              className={`hidden md:block p-2 rounded-lg 
+                       ${isIncognito ? 'bg-red-600' : 'bg-slate-700/50'} 
+                       hover:bg-slate-600/50 transition-colors`}
             >
-              {isIncognito ? 'Exit Incognito' : 'Incognito Mode'}
+              {isIncognito ? 'Exit Incognito' : 'Incognito'}
             </button>
-            <button
-              onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-              className="ml-4 p-2 rounded-lg bg-slate-700/50 hover:bg-slate-600/50 transition-colors"
-            >
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
-              </svg>
-            </button>
-            {activeDocuments.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-blue-400">
-                  Document Analysis Mode
-                </span>
-                <button
-                  onClick={clearActiveDocuments}
-                  className="p-1 hover:bg-slate-700/50 rounded-full"
-                  title="Clear active documents"
-                >
-                  <svg className="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-6 scroll-smooth">
-          <div className="max-w-3xl mx-auto space-y-6">
+        {/* Messages area with better mobile padding */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 md:p-6 pb-24 md:pb-6">
+          <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
             {messages.map((msg, index) => (
               <MessageBubble 
-                key={`${msg.type}-${index}}`}
+                key={`${msg.type}-${index}`}
                 message={msg}
+                isMobile={isMobile()}
               />
             ))}
             {isTyping && (
               <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-                  <IconComponents.MessageCircle className="w-5 h-5 text-white" />
+                <div className="w-6 h-6 md:w-8 md:h-8 rounded-full bg-blue-600 
+                              flex items-center justify-center">
+                  <IconComponents.MessageCircle className="w-4 h-4 md:w-5 h-5 text-white" />
                 </div>
-                <div className="rounded-2xl bg-slate-700/50 backdrop-blur-sm px-4 py-2">
+                <div className="rounded-2xl bg-slate-700/50 backdrop-blur-sm px-3 py-2">
                   <TypingAnimation />
                 </div>
               </div>
             )}
-            <div ref={chatContainerRef} /> {/* Scroll anchor */}
+            <div ref={chatContainerRef} />
           </div>
         </div>
 
-        {/* Input Area - Updated with better mobile responsiveness */}
-        <div className="border-t border-slate-700/50 bg-slate-800/50 backdrop-blur-sm p-2 sm:p-4">
+        {/* Fixed input area for mobile */}
+        <div className="fixed bottom-0 left-0 right-0 md:relative border-t 
+                      border-slate-700/50 bg-slate-800/95 backdrop-blur-sm 
+                      p-2 md:p-4 pb-8 md:pb-4 mb-6 md:mb-0"> {/* Adjusted pb-16 and mb-14 */}
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-            <div className="flex items-end space-x-2 sm:space-x-4">
+            <div className="flex items-end space-x-2">
               <div className="flex-1 relative">
                 <input
                   ref={inputRef}
@@ -581,76 +617,61 @@ const Chat = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder={isTempUser ? "Register to start chatting..." : isWebMode ? "Ask me to search the web..." : "Ask any legal question..."}
-                  className="w-full rounded-lg pl-3 sm:pl-4 pr-32 sm:pr-36 py-2 sm:py-3 bg-slate-700/50 
-                           border border-slate-600/50 text-white placeholder-slate-400 
-                           focus:outline-none focus:border-blue-500 focus:ring-2 
-                           focus:ring-blue-500/20 transition-all duration-200 
-                           text-sm sm:text-base"
+                  placeholder={isTempUser ? "Register to chat..." : 
+                             isWebMode ? "Search the web..." : 
+                             "Ask any legal question..."}
+                  className="w-full rounded-lg pl-3 pr-24 py-2 md:py-3 
+                           bg-slate-700/50 border border-slate-600/50 
+                           text-white placeholder-slate-400 text-sm md:text-base"
                   disabled={isTyping || isTempUser}
                 />
-                <div className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 
-                              flex items-center gap-0.5 sm:gap-1">
-                  {/* Web Mode Toggle */}
+                <div className="absolute right-1 top-1/2 -translate-y-1/2 
+                              flex items-center gap-1">
+                  {/* Compact mobile buttons */}
                   <button
                     type="button"
                     onClick={() => setIsWebMode(!isWebMode)}
-                    className={`relative group p-1.5 rounded-lg transition-all duration-200
-                      ${isWebMode 
-                        ? 'bg-blue-500 text-white' 
-                        : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                    className={`p-1.5 rounded-lg transition-all duration-200
+                             ${isWebMode ? 'bg-blue-500 text-white' : 
+                               'text-slate-400 hover:text-white'}`}
                     disabled={isTempUser}
-                    title={isWebMode ? "Disable web search" : "Enable web search"}
                   >
-                    <IconComponents.Globe className="w-5 h-5" />
-                    
-                    {/* Tooltip */}
-                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs 
-                                   text-white bg-slate-800 rounded opacity-0 group-hover:opacity-100 
-                                   transition-opacity duration-200 whitespace-nowrap">
-                      {isWebMode ? 'Web search enabled' : 'Enable web search'}
-                    </span>
+                    <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
 
-                  <VoiceChat 
-                    onVoiceInput={handleVoiceInput}
-                    disabled={isTyping || isTempUser}
-                    className="w-7 h-7 sm:w-8 sm:h-8 p-1.5" 
-                  />
                   <DocumentUploader 
                     onDocumentSelect={handleDocumentSelect} 
                     onUploadComplete={handleUploadComplete}
-                    className="w-7 h-7 sm:w-8 sm:h-8 p-1.5"
+                    className="w-6 h-6 md:w-8 md:h-8 p-1"
                     disabled={isTempUser}
                   />
+                  
                   <button 
                     type="submit"
                     disabled={isTyping || !message.trim() || isTempUser}
-                    className="rounded-md p-1.5 sm:p-2 text-slate-400 hover:text-white 
-                              disabled:opacity-50 disabled:cursor-not-allowed 
-                              transition-all duration-200"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white 
+                             disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <IconComponents.Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    <IconComponents.Send className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
                 </div>
               </div>
             </div>
-
-            {/* Web Search Mode Indicator */}
-            {isWebMode && (
-              <div className="mt-2 text-xs text-center text-blue-400">
-                <span className="inline-flex items-center gap-1">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                  </span>
-                  Web search mode active
-                </span>
-              </div>
-            )}
           </form>
         </div>
+
+        {/* Mobile Bottom Bar */}
+        <MobileBottomBar
+          onNewChat={handleNewChat}
+          onToggleHistory={() => setIsHistoryOpen(!isHistoryOpen)}
+          isHistoryOpen={isHistoryOpen}
+          onToggleMenu={() => setIsMobileMenuOpen(true)}
+          isWebMode={isWebMode}
+          onToggleWebMode={() => setIsWebMode(!isWebMode)}
+        />
       </div>
+
+      {/* Chat History Sidebar - Full screen on mobile */}
       <ChatHistory
         conversations={conversations}
         onSelectChat={handleSelectChat}
