@@ -71,11 +71,15 @@ const Register = () => {
         password: formData.password
       });
 
-      // Navigate to OTP verification with email
+      // Store verification data in localStorage
+      localStorage.setItem('verificationEmail', formData.email);
+      localStorage.setItem('registrationTime', Date.now().toString());
+
+      // Navigate to OTP verification
       navigate('/verify-otp', { 
         state: { 
           email: formData.email,
-          message: 'Please check your email for the verification code.'
+          isNewRegistration: true
         },
         replace: true 
       });

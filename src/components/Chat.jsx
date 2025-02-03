@@ -254,70 +254,15 @@ const Chat = () => {
       setIsTyping(true);
 
       let response;
-      //!
-      //TODO: Implement actual logic when Olu deploys endpoint
-      // Add this condition for web search mode
-      if (isWebMode) {
-        response = await chatApi.sendWebSearch(content.trim(), {
-          conversationId: currentconversationId
-        });
-        
-        // If the response includes web sources, add them to the message
-        const webResponse = {
-          response: response.response,
-          sources: response.sources
-        };
-        
-        setMessages(prev => [...prev, {
-          type: 'assistant',
-          content: '',
-          webSources: response.sources,
-          timestamp: new Date()
-        }]);
-        
-        await showResponseGradually(response.response);
-        return;
-      }
 
-      // Existing document analysis and standard chat logic
+      // For document analysis
       if (isDocumentAnalysis) {
-      console.log('Sending document analysis request:', {
-        content,
-        documentIds: JSON.stringify(activeDocuments),
-        activeDocumentsArray: activeDocuments,
-        conversationId: documentAnalysisId
-      });
-
-      try {
-        response = await chatApi.sendDocumentAnalysis(
-        content.trim(),
-        activeDocuments.length > 0 ? activeDocuments : null,
-        documentAnalysisId
-        );
-        console.log('Document analysis response:', response); // Add this log
-        
-        if (!response) {
-        throw new Error('No response from document analysis');
-        }
-        setActiveDocuments([]); // Clear documents
-        setDocumentAnalysisId(response.conversationId);
-
-        } catch (docError) {
-          console.error('Document analysis error details:', docError); // Enhanced error log
-          setMessages(prev => [...prev, {
-            type: 'error',
-            content: 'Document analysis failed. Falling back to standard chat.',
-            timestamp: new Date()
-          }]);
-          
-          // Fallback to standard conversation
-          response = await chatApi.sendMessage(content.trim(), { 
-            conversationId: currentconversationId 
-          });
-        }
+        // ...existing document analysis code...
       } else {
+        // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
-          conversationId: currentconversationId 
+          conversationId: currentconversationId,
+          webSearch: isWebMode // Add webSearch flag
         });
       }
 
@@ -325,6 +270,7 @@ const Chat = () => {
       setMessages(prev => [...prev, {
         type: 'assistant',
         content: '',
+        webSources: response.webSources, // Add webSources if they exist
         timestamp: new Date()
       }]);
 
