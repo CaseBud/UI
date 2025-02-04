@@ -41,6 +41,27 @@ const IconComponents = {
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
     </svg>
   ),
+  ChevronRight: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  ),
+  Tools: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  ),
+  Wikipedia: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-.782.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z"/>
+    </svg>
+  ),
+  Default: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+    </svg>
+  ),
 };
 
 
@@ -72,6 +93,7 @@ const Chat = () => {
   const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
   const [isWebMode, setIsWebMode] = useState(false); // Add new state for web browsing mode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
@@ -92,31 +114,6 @@ const Chat = () => {
     }
   };
 
-  const handleSelectChat = async (conversationId) => {
-    if (isIncognito) return; // Disable chat selection in incognito mode
-
-    try {
-      const conversation = await chatApi.getConversationById(conversationId);
-      if (conversation.type === 'document-analysis') {
-        setDocumentAnalysisId(conversation._id);
-        setIsDocumentAnalysis(true);
-      } else {
-        setDocumentAnalysisId(null);
-        setIsDocumentAnalysis(false);
-        setCurrentconversationId(conversation._id);
-      }
-      setMessages(conversation.messages);
-      setIsNewConversation(false);
-    } catch (error) {
-      console.error('Failed to fetch chat:', error);
-      // Show error message to user
-      setMessages(prev => [...prev, {
-        type: 'error',
-        content: 'Failed to load conversation. Please try again.',
-        timestamp: new Date()
-      }]);
-    }
-  };
 
   const handleDeleteChat = async (conversationId) => {
     if (isIncognito) return; // Disable chat deletion in incognito mode
@@ -251,10 +248,6 @@ const Chat = () => {
   
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
     
-    // Get last message for context
-    const lastMessage = messages[messages.length - 1];
-    const contextMessages = messages.slice(-3);
-  
     try {
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
@@ -263,35 +256,32 @@ const Chat = () => {
       let response;
   
       if (isDocumentAnalysis) {
-        response = await chatApi.sendDocumentAnalysis(content.trim(), activeDocuments, documentAnalysisId);
-        // Add empty assistant message for document analysis
-        setMessages(prev => [...prev, {
-          type: 'assistant',
-          content: '',
-          timestamp: new Date()
-        }]);
+        // ...existing document analysis code...
       } else {
-        // Regular chat with optional web search
+        // Regular chat with web search
         response = await chatApi.sendMessage(content.trim(), { 
           conversationId: currentconversationId,
           webSearch: isWebMode,
           context: {
-            lastMessage: lastMessage?.content,
-            recentMessages: contextMessages.map(msg => ({
+            lastMessage: messages[messages.length - 1]?.content,
+            recentMessages: messages.slice(-3).map(msg => ({
               role: msg.type,
               content: msg.content
             }))
           }
         });
-  
-        // Add empty assistant message with web sources for regular chat
-        setMessages(prev => [...prev, {
+
+        console.log('API Response:', response); // Debug log
+
+        // Add assistant message with web sources
+        const newAssistantMessage = {
           type: 'assistant',
           content: '',
-          webSources: response.webSources,
-          context: response.context,
+          webSources: isWebMode ? response.webSources || [] : [],
           timestamp: new Date()
-        }]);
+        };
+
+        setMessages(prev => [...prev, newAssistantMessage]);
       }
   
       await showResponseGradually(response.response || response.message || 'No response received');
@@ -360,8 +350,13 @@ const Chat = () => {
   const handleNewChat = createNewChat;
 
   const handleVoiceInput = (text) => {
-    // This will be implemented when the backend is ready
-    setMessage(text);
+    if (typeof text === 'string') {
+      setMessage(text);
+      // Auto submit after voice transcription
+      sendMessage(text);
+    } else {
+      setMessage(text.target.value);
+    }
   };
 
   const toggleIncognitoMode = () => {
@@ -428,6 +423,17 @@ const Chat = () => {
       ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto max-w-md'
       : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
   
+    const getSiteIcon = (url) => {
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        if (hostname.includes('wikipedia.org')) return 'Wikipedia';
+        // Add more site checks here
+        return 'Default';
+      } catch {
+        return 'Default';
+      }
+    };
+
     return (
       <div className={`group flex items-end gap-2 px-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
         {/* Assistant Avatar - Only show on first message or after user message */}
@@ -443,28 +449,46 @@ const Chat = () => {
             
             {/* Document Preview */}
             {message.document && <DocumentPreview document={message.document} />}
-            
-            {/* Web Sources */}
-            {message.webSources && message.webSources.length > 0 && (
-              <div className="mt-2 border-t border-slate-600/50 pt-2">
-                <p className="text-xs text-slate-400 mb-1">Sources:</p>
-                <div className="space-y-1">
-                  {message.webSources.map((source, index) => (
+          </div>
+
+          {/* Web Sources - Moved outside the message bubble for better visibility */}
+          {!isUser && message.webSources && message.webSources.length > 0 && (
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-1.5 px-1">
+                <IconComponents.Globe className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-xs font-medium text-blue-400">Web References</span>
+              </div>
+              <div className="space-y-2">
+                {message.webSources.map((source, index) => {
+                  const SiteIcon = IconComponents[getSiteIcon(source.url)];
+                  return (
                     <a
                       key={index}
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-xs text-blue-400 hover:text-blue-300 truncate"
+                      className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
+                               hover:bg-slate-700/50 transition-colors"
                     >
-                      {source.title || source.url}
+                      <div className="flex items-start gap-2">
+                        {/* Site Icon */}
+                        <div className="flex-shrink-0 w-4 h-4 mt-0.5 text-slate-400">
+                          <SiteIcon className="w-full h-full" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm text-blue-400 font-medium truncate mb-0.5">
+                            {source.title || 'Web Source'}
+                          </h4>
+                          <p className="text-xs text-slate-400 truncate">{source.url}</p>
+                        </div>
+                      </div>
                     </a>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
-            )}
-          </div>
-  
+            </div>
+          )}
+
           {/* Timestamp and Copy Button Row */}
           <div className={`flex items-center gap-2 text-xs text-slate-400 ${isUser ? 'justify-end' : 'justify-start'}`}>
             <span className="opacity-60">
@@ -522,6 +546,123 @@ const Chat = () => {
   const handleMessageChange = (e) => {
     setMessage(e.target.value);
     adjustTextareaHeight(e.target);
+  };
+
+  // Add new effect to handle page reload
+  useEffect(() => {
+    const restoreChat = async () => {
+      // Try to get last conversation from localStorage
+      const lastConversationId = localStorage.getItem('lastConversationId');
+      const savedMessages = JSON.parse(localStorage.getItem('currentChatMessages') || '[]');
+      
+      if (savedMessages.length > 0) {
+        setMessages(savedMessages);
+      }
+
+      if (lastConversationId) {
+        try {
+          await handleSelectChat(lastConversationId);
+        } catch (error) {
+          console.error('Failed to restore chat:', error);
+          // If chat restoration fails, start a new chat
+          createNewChat();
+        }
+      }
+    };
+
+    restoreChat();
+  }, []);
+
+  // Add effect to save current chat state
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem('currentChatMessages', JSON.stringify(messages));
+    }
+    if (currentconversationId) {
+      localStorage.setItem('lastConversationId', currentconversationId);
+    }
+  }, [messages, currentconversationId]);
+
+  // Update createNewChat to clear saved state
+  // const createNewChat = async () => {
+  //   if (isIncognito) return; // Disable new chat creation in incognito mode
+
+  //   try {
+  //     // First, save the current chat if it exists and has messages
+  //     if (messages.length > 1) { // More than just the initial greeting
+  //       const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
+        
+  //       await chatApi.createNewChat(title, messages);
+  //       await fetchConversations(); // Refresh the conversation list
+  //     }
+
+  //     // Reset current chat state
+  //     setMessages([{
+  //       type: 'assistant',
+  //       content: defaultGreeting,
+  //       timestamp: new Date()
+  //     }]);
+  //     setCurrentconversationId(null);
+  //     setIsNewConversation(true);
+  //     setMessage('');
+  //     setSelectedDocuments([]);
+      
+  //     if (window.innerWidth < 768) {
+  //       setIsHistoryOpen(false);
+  //     }
+  //   } catch (error) {
+  //     console.error('Failed to create new chat:', error);
+  //   }
+  //   // Clear saved chat state
+  //   localStorage.removeItem('lastConversationId');
+  //   localStorage.removeItem('currentChatMessages');
+    
+  //   // Reset states
+  //   setMessages([{
+  //     type: 'assistant',
+  //     content: defaultGreeting,
+  //     timestamp: new Date()
+  //   }]);
+  //   setCurrentconversationId(null);
+  //   // ...rest of existing code...
+  // };
+
+  // Update handleSelectChat to handle errors better
+  const handleSelectChat = async (conversationId) => {
+    if (isIncognito) return;
+
+    try {
+      const conversation = await chatApi.getConversationById(conversationId);
+      if (!conversation) {
+        throw new Error('Chat not found');
+      }
+
+      if (conversation.type === 'document-analysis') {
+        setDocumentAnalysisId(conversation._id);
+        setIsDocumentAnalysis(true);
+      } else {
+        setDocumentAnalysisId(null);
+        setIsDocumentAnalysis(false);
+        setCurrentconversationId(conversation._id);
+      }
+      setMessages(conversation.messages);
+      setIsNewConversation(false);
+    } catch (error) {
+      console.error('Failed to fetch chat:', error);
+      
+      // Clear saved state if chat not found
+      if (error.message === 'Chat not found') {
+        localStorage.removeItem('lastConversationId');
+        localStorage.removeItem('currentChatMessages');
+        createNewChat();
+      }
+      
+      setMessages(prev => [...prev, {
+        type: 'error',
+        content: 'Failed to load conversation. Starting a new chat.',
+        timestamp: new Date()
+      }]);
+    }
   };
 
   return (
@@ -605,61 +746,105 @@ const Chat = () => {
         {/* Input Area - Added padding bottom for mobile */}
         <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-16 md:pb-4">
           <div className="max-w-2xl mx-auto p-4">
-            <form onSubmit={handleSubmit} className="relative">
-              <textarea
-                ref={inputRef}
-                value={message}
-                onChange={handleMessageChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                    // Reset height after sending
-                    e.target.style.height = '44px';
-                  }
-                }}
-                placeholder={isTempUser ? "Register to chat..." : 
-                           isWebMode ? "Search the web..." : 
-                           "Ask any legal question..."}
-                className="w-full rounded-lg pl-3 pr-28 py-2 
-                         bg-slate-700/50 border border-slate-600/50 
-                         text-white placeholder-slate-400 text-sm
-                         resize-none overflow-hidden
-                         leading-normal transition-all duration-200"
-                disabled={isTyping || isTempUser}
-                rows="1"
-                style={{ height: '44px' }} // Default height
-              />
-              
-              {/* Action buttons container with adjusted spacing */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 
-                            flex items-center gap-2 md:gap-3"> {/* Increased gap */}
-                <button
-                  type="button"
-                  onClick={() => setIsWebMode(!isWebMode)}
-                  className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
-                           ${isWebMode ? 'bg-blue-500 text-white' : 
-                             'text-slate-400 hover:text-white'}`}
-                  disabled={isTempUser}
-                >
-                  <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-
-                <DocumentUploader 
-                  onDocumentSelect={handleDocumentSelect} 
-                  onUploadComplete={handleUploadComplete}
-                  className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
-                  disabled={isTempUser}
+            <form onSubmit={handleSubmit} className="relative space-y-2">
+              <div className="relative">
+                <textarea
+                  ref={inputRef}
+                  value={message}
+                  onChange={handleMessageChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                      // Reset height after sending
+                      e.target.style.height = '44px';
+                    }
+                  }}
+                  placeholder={isTempUser ? "Register to chat..." : 
+                            isWebMode ? "Search the web for legal information..." : 
+                            "Ask any legal question..."}
+                  className={`w-full rounded-lg pl-3 pr-20 py-2 
+                            bg-slate-700/50 border text-white placeholder-slate-400 
+                            text-sm resize-none overflow-hidden leading-normal 
+                            transition-all duration-200
+                            ${isWebMode 
+                              ? 'border-blue-500/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20' 
+                              : 'border-slate-600/50 focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20'
+                            }`}
+                  disabled={isTyping || isTempUser}
+                  rows="1"
+                  style={{ height: '44px' }} // Default height
                 />
                 
-                <button 
-                  type="submit"
-                  disabled={isTyping || !message.trim() || isTempUser}
-                  className="p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-white 
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <IconComponents.Send className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
+                {/* Action buttons container with adjusted spacing */}
+                <div className="absolute right-2 top-0 h-full flex items-center gap-1.5">
+                  <div className="relative">
+                    {/* Tools Menu Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsToolsOpen(!isToolsOpen)}
+                      className={`p-1.5 rounded-lg transition-all duration-200 flex items-center justify-center
+                                ${isToolsOpen ? 'bg-slate-700/50 text-white' : 'text-slate-400 hover:text-white'}`}
+                      title="Show tools"
+                    >
+                      <IconComponents.Tools className="w-4 h-4" />
+                    </button>
+
+                    {/* Expandable Tools Menu */}
+                    <div className={`absolute bottom-full right-0 mb-2 transition-all duration-200 transform
+                                    ${isToolsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
+                                    bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm`}>
+                      <div className="p-2 flex items-center gap-2">
+                        <VoiceChat 
+                          onVoiceInput={handleVoiceInput} 
+                          disabled={isTyping || isTempUser}
+                          onSubmit={sendMessage}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsWebMode(!isWebMode)}
+                          className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
+                                    ${isWebMode 
+                                      ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50' 
+                                      : 'text-slate-400 hover:text-white'}`}
+                          disabled={isTempUser}
+                          title={isWebMode ? "Web search enabled" : "Enable web search"}
+                        >
+                          <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
+                        </button>
+                        <DocumentUploader 
+                          onDocumentSelect={handleDocumentSelect} 
+                          onUploadComplete={handleUploadComplete}
+                          className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
+                          disabled={isTempUser}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Send Button */}
+                  <button 
+                    type="submit"
+                    disabled={isTyping || !message.trim() || isTempUser}
+                    className="p-1.5 rounded-lg transition-colors flex items-center justify-center
+                              text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <IconComponents.Send className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Web Search Indicator - Moved below input */}
+                {isWebMode && (
+                  <div className="flex items-center gap-1.5 text-xs text-blue-400/90">
+                    <IconComponents.Globe className="w-3 h-3" />
+                    <span className="flex items-center gap-1">
+                      Web search enabled
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                        beta
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
             </form>
           </div>
