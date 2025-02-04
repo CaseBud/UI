@@ -634,6 +634,10 @@ const Chat = () => {
               {/* Action buttons container with adjusted spacing */}
               <div className="absolute right-2 top-1/2 -translate-y-1/2 
                             flex items-center gap-2 md:gap-3"> {/* Increased gap */}
+                <VoiceChat 
+                  onVoiceInput={handleMessageChange} 
+                  disabled={isTyping || isTempUser}
+                />
                 <button
                   type="button"
                   onClick={() => setIsWebMode(!isWebMode)}

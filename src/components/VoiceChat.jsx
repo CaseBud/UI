@@ -1,82 +1,124 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
+import { fetchWithToken } from '../utils/api';
 
-const VoiceChat = ({ onVoiceInput, disabled }) => {
-  const [isListening, setIsListening] = useState(false);
-  const [volume, setVolume] = useState(0);
-  const animationFrameRef = useRef();
+const VoiceChat = ({ onVoiceInput, disabled, onSubmit }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const mediaRecorder = useRef(null);
+  const audioChunks = useRef([]);
 
-  const startListening = () => {
-    setIsListening(true);
-    // Simulate volume changes for the demo
-    const simulateVolume = () => {
-      setVolume(Math.random());
-      animationFrameRef.current = requestAnimationFrame(simulateVolume);
-    };
-    simulateVolume();
-  };
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder.current = new MediaRecorder(stream);
+      audioChunks.current = [];
 
-  const stopListening = () => {
-    setIsListening(false);
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
+      mediaRecorder.current.ondataavailable = (event) => {
+        audioChunks.current.push(event.data);
+      };
+
+      mediaRecorder.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        await handleTranscription(audioBlob);
+      };
+
+      mediaRecorder.current.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error accessing microphone:', error);
     }
-    setVolume(0);
   };
 
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, []);
+  const stopRecording = () => {
+    if (mediaRecorder.current?.state === 'recording') {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
+      mediaRecorder.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
 
-  const getVoiceBars = () => {
-    return Array.from({ length: 4 }, (_, i) => (
-      <div
-        key={i}
-        className={`w-1 bg-blue-500 rounded-full transition-all duration-150 transform ${
-          isListening ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          height: `${Math.max(3, (volume * 24) + (Math.random() * 12))}px`,
-          marginLeft: '2px',
-          animation: isListening ? 'pulse 0.5s ease-in-out infinite' : 'none',
-          animationDelay: `${i * 0.1}s`
-        }}
-      />
-    ));
+  const handleTranscription = async (audioBlob) => {
+    setIsProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', audioBlob);
+
+      const response = await fetchWithToken('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      }, true); // Skip content-type header
+
+      if (response.status === 'success' && response.data?.transcript) {
+        // Update input field and trigger chat submission
+        onVoiceInput({ target: { value: response.data.transcript } });
+        onSubmit(response.data.transcript);
+      }
+    } catch (error) {
+      console.error('Transcription error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
     <button
-      onClick={isListening ? stopListening : startListening}
-      disabled={disabled}
-      className={`relative group p-2 rounded-md transition-all duration-300 ${
-        isListening ? 'bg-blue-500/20' : 'hover:bg-slate-700/50'
+      onClick={isRecording ? stopRecording : startRecording}
+      disabled={disabled || isProcessing}
+      className={`relative p-1.5 md:p-2 rounded-lg transition-all duration-200 ${
+        isRecording 
+          ? 'text-red-400' 
+          : isProcessing
+          ? 'text-slate-500'
+          : 'text-slate-400 hover:text-white'
       }`}
-      title={isListening ? 'Stop voice input' : 'Start voice input'}
+      title={isRecording ? 'Stop recording' : 'Start voice input'}
     >
-      {isListening ? (
-        <div className="flex items-center space-x-0.5 px-1">
-          {getVoiceBars()}
+      {/* Microphone Icon */}
+      <svg 
+        className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-200 ${
+          isRecording ? 'scale-110' : ''
+        }`} 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+      >
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+        <line x1="8" y1="23" x2="16" y2="23" />
+      </svg>
+
+      {/* Recording Animation */}
+      {isRecording && (
+        <div className="absolute -top-1 -right-1 flex space-x-0.5">
+          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" 
+               style={{animationDelay: '0ms'}} />
+          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" 
+               style={{animationDelay: '150ms'}} />
+          <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" 
+               style={{animationDelay: '300ms'}} />
         </div>
-      ) : (
-        <svg
-          className={`w-5 h-5 ${
-            disabled ? 'text-slate-600' : 'text-slate-400 group-hover:text-white'
-          }`}
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-          />
-        </svg>
+      )}
+
+      {/* Processing Animation */}
+      {isProcessing && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex items-center gap-0.5">
+            {[...Array(3)].map((_, i) => (
+              <div 
+                key={i}
+                className="w-0.5 h-3 bg-slate-400 rounded-full animate-synthesizer"
+                style={{
+                  animationDelay: `${i * 100}ms`,
+                  animationDuration: '600ms'
+                }}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </button>
   );
