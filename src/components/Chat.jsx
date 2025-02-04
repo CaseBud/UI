@@ -89,7 +89,8 @@ const Chat = () => {
     content: {
       response: defaultGreeting,
       query: null
-    }
+    },
+    timestamp: new Date()
   }]);
   const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
@@ -773,24 +774,46 @@ const Chat = () => {
         <div className="flex-1 overflow-y-auto bg-slate-900">
           <div className="max-w-3xl mx-auto py-4 space-y-3">
             {messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg p-4 ${
+              <div key={index} className="group flex items-end gap-2 px-2">
+                {/* Assistant Avatar - Only show for assistant messages */}
+                {message.type === 'assistant' && (
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mb-1">
+                    <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+                  </div>
+                )}
+                
+                <div className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-1 ${
+                  message.type === 'user' ? 'ml-auto' : ''
+                }`}>
+                  <div className={`px-3 py-2 ${
                     message.type === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-slate-700/50 text-slate-200'
-                  }`}
-                >
-                  {/* Show query for user messages, response for assistant messages */}
-                  <p className="whitespace-pre-wrap text-sm">
-                    {message.type === 'user' 
-                      ? message.content.query 
-                      : message.content.response}
-                  </p>
+                      ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
+                      : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
+                  }`}>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {message.type === 'user' ? message.content.query : message.content.response}
+                    </p>
+                  </div>
+                  
+                  {/* Timestamp */}
+                  <div className={`flex items-center gap-2 text-xs text-slate-400 ${
+                    message.type === 'user' ? 'justify-end' : 'justify-start'
+                  }`}>
+                    <span className="opacity-60">
+                      {new Date(message.timestamp).toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  </div>
                 </div>
+
+                {/* User Avatar */}
+                {message.type === 'user' && (
+                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center mb-1">
+                    <IconComponents.User className="w-4 h-4 text-white" />
+                  </div>
+                )}
               </div>
             ))}
             {isTyping && (
