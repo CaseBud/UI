@@ -17,6 +17,7 @@ const Register = () => {
   const [validationErrors, setValidationErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
 
+  
   const checkPasswordStrength = (password) => {
     let strength = 0;
     if (password.length >= 8) strength++;
@@ -59,11 +60,16 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
-
+    
     setIsLoading(true);
     setError('');
-
+    
     try {
+      localStorage.removeItem('lastConversationId');
+      localStorage.removeItem('currentChatMessages');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('lastActivity');
       // Register the user
       const response = await authService.register({
         email: formData.email,

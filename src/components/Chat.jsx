@@ -124,7 +124,6 @@ const Chat = () => {
     }
   };
 
-
   const handleDeleteChat = async (conversationId) => {
     if (isIncognito) return; // Disable chat deletion in incognito mode
 
@@ -255,10 +254,6 @@ const Chat = () => {
   
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
     
-    // Get last message for context
-    // const lastMessage = messages[messages.length - 1];
-    // const contextMessages = messages.slice(-3);
-  
     try {
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
@@ -349,14 +344,6 @@ const Chat = () => {
     if (isIncognito) return; // Disable new chat creation in incognito mode
 
     try {
-      // First, save the current chat if it exists and has messages
-      // if (messages.length > 1) { // More than just the initial greeting
-      //   const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
-        
-      //   await chatApi.createNewChat(title, messages);
-      //   await fetchConversations(); // Refresh the conversation list
-      // }
-
       await fetchConversations(); // Refresh the conversation list
       // Reset current chat state
       setMessages([{
@@ -618,50 +605,6 @@ const Chat = () => {
     }
   }, [messages, currentconversationId]);
 
-  // Update createNewChat to clear saved state
-  // const createNewChat = async () => {
-  //   if (isIncognito) return; // Disable new chat creation in incognito mode
-
-  //   try {
-  //     // First, save the current chat if it exists and has messages
-  //     if (messages.length > 1) { // More than just the initial greeting
-  //       const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
-        
-  //       await chatApi.createNewChat(title, messages);
-  //       await fetchConversations(); // Refresh the conversation list
-  //     }
-
-  //     // Reset current chat state
-  //     setMessages([{
-  //       type: 'assistant',
-  //       content: defaultGreeting,
-  //       timestamp: new Date()
-  //     }]);
-  //     setCurrentconversationId(null);
-  //     setIsNewConversation(true);
-  //     setMessage('');
-  //     setSelectedDocuments([]);
-      
-  //     if (window.innerWidth < 768) {
-  //       setIsHistoryOpen(false);
-  //     }
-  //   } catch (error) {
-  //     console.error('Failed to create new chat:', error);
-  //   }
-  //   // Clear saved chat state
-  //   localStorage.removeItem('lastConversationId');
-  //   localStorage.removeItem('currentChatMessages');
-    
-  //   // Reset states
-  //   setMessages([{
-  //     type: 'assistant',
-  //     content: defaultGreeting,
-  //     timestamp: new Date()
-  //   }]);
-  //   setCurrentconversationId(null);
-  //   // ...rest of existing code...
-  // };
-
   // Update handleSelectChat to handle errors better
   const handleSelectChat = async (conversationId) => {
     if (isIncognito) return;
@@ -693,12 +636,19 @@ const Chat = () => {
         localStorage.removeItem('currentChatMessages');
         createNewChat();
       }
-      
+
+      if (isNewConversation) {
+        return;
+      }
+          
       setMessages(prev => [...prev, {
         type: 'error',
         content: 'Failed to load conversation. Starting a new chat.',
         timestamp: new Date()
       }]);
+      localStorage.removeItem('lastConversationId');
+      localStorage.removeItem('currentChatMessages');
+      createNewChat();
     }
   };
 

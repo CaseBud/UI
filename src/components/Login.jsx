@@ -9,15 +9,22 @@ const Login = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
+  
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
     
     setIsLoading(true);
     setError('');
-
+    
     try {
+      localStorage.removeItem('lastConversationId');
+      localStorage.removeItem('currentChatMessages');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('lastActivity');
+      
       await login(credentials);
       // Redirect to the page user tried to visit or to chat
       const from = location.state?.from?.pathname || '/chat';
