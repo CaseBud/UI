@@ -48,11 +48,17 @@ const IconComponents = {
   ),
   Tools: (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-      <line x1="6" y1="9" x2="18" y2="9" />
-      <circle cx="8" cy="15" r="1" />
-      <circle cx="12" cy="15" r="1" />
-      <circle cx="16" cy="15" r="1" />
+      <path d="M3 7 L12 3 L21 7 L12 11 Z" fill="none" />
+      <path d="M3 7 L3 17 L12 21 L12 11 Z" fill="none" />
+      <path d="M21 7 L21 17 L12 21 L12 11 Z" fill="none" />
+      
+      <circle cx="7" cy="14" r="1.5" />
+      <circle cx="12" cy="16" r="1.5" />
+      <circle cx="17" cy="14" r="1.5" />
+      
+      <line x1="12" y1="11" x2="12" y2="21" stroke="currentColor" opacity="0.3" />
+      <line x1="3" y1="7" x2="12" y2="11" stroke="currentColor" opacity="0.3" />
+      <line x1="21" y1="7" x2="12" y2="11" stroke="currentColor" opacity="0.3" />
     </svg>
   ),
   Wikipedia: (props) => (
