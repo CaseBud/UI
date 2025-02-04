@@ -147,9 +147,7 @@ const Chat = () => {
         },
         body: JSON.stringify({ title: newTitle })
       });
-      setConversations(prev => prev.map(chat => 
-        chat.id === conversationId ? { ...chat, title: newTitle } : chat
-      ));
+      fetchConversations(); // Refresh the conversation list
     } catch (error) {
       console.error('Failed to update chat title:', error);
     }
@@ -212,7 +210,6 @@ const Chat = () => {
     setUploadedDocuments(prev => [...prev, document]);
     setActiveDocuments(prev => {
       const newActiveDocuments = [...prev, document._id];
-      console.log('Active document IDs:', JSON.stringify(newActiveDocuments));
       return newActiveDocuments;
     });
     setIsDocumentAnalysis(true);
@@ -231,7 +228,7 @@ const Chat = () => {
 
     try {
       setCurrentconversationId(null); // Reset conversationId for new document chat
-      const response = await chatApi.sendDocumentAnalysis(query, documentIds);
+      const response = await chatApi.sendDocumentAnalysis(query, documentIds, documentAnalysisId);
       await showResponseGradually(response.response || 'No response received');
     } catch (error) {
       console.error('Document analysis error:', error);
@@ -248,6 +245,10 @@ const Chat = () => {
   
     const newUserMessage = { type: 'user', content, timestamp: new Date() };
     
+    // Get last message for context
+    // const lastMessage = messages[messages.length - 1];
+    // const contextMessages = messages.slice(-3);
+  
     try {
       setMessages(prev => [...prev, newUserMessage]);
       setMessage('');
@@ -256,32 +257,51 @@ const Chat = () => {
       let response;
   
       if (isDocumentAnalysis) {
-        // ...existing document analysis code...
+        try {
+          response = await chatApi.sendDocumentAnalysis(
+            content.trim(),
+            activeDocuments.length > 0 ? activeDocuments : null,
+            documentAnalysisId
+          );
+
+          if (!response) {
+            throw new Error('No response from document analysis');
+          }
+          setActiveDocuments([]); // Clear documents
+          setDocumentAnalysisId(response.conversationId);
+          // Add empty assistant message for document analysis
+          setMessages(prev => [...prev, {
+            type: 'assistant',
+            content: '',
+            timestamp: new Date()
+          }]);
+        } catch (docError) {
+            console.error('Document analysis error details:', docError); // Enhanced error log
+            setMessages(prev => [...prev, {
+              type: 'error',
+              content: 'Document analysis failed. Please try again.',
+              timestamp: new Date()
+            }]);
+        }
       } else {
-        // Regular chat with web search
+        setDocumentAnalysisId(null); // Reset document analysis ID
+        setIsDocumentAnalysis(false);
+        // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
           conversationId: currentconversationId,
-          webSearch: isWebMode,
-          context: {
-            lastMessage: messages[messages.length - 1]?.content,
-            recentMessages: messages.slice(-3).map(msg => ({
-              role: msg.type,
-              content: msg.content
-            }))
-          }
+          webSearch: isWebMode
         });
+        setCurrentconversationId(response.conversationId);
+        console.log(currentconversationId);
 
-        console.log('API Response:', response); // Debug log
-
-        // Add assistant message with web sources
-        const newAssistantMessage = {
+        // Add empty assistant message with web sources for regular chat
+        setMessages(prev => [...prev, {
           type: 'assistant',
           content: '',
-          webSources: isWebMode ? response.webSources || [] : [],
+          webSources: [],
           timestamp: new Date()
-        };
+        }]);
 
-        setMessages(prev => [...prev, newAssistantMessage]);
       }
   
       await showResponseGradually(response.response || response.message || 'No response received');
@@ -320,13 +340,14 @@ const Chat = () => {
 
     try {
       // First, save the current chat if it exists and has messages
-      if (messages.length > 1) { // More than just the initial greeting
-        const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
+      // if (messages.length > 1) { // More than just the initial greeting
+      //   const title = messages.find(m => m.type === 'user')?.content?.slice(0, 40) + '...' || 'New Chat';
         
-        await chatApi.createNewChat(title, messages);
-        await fetchConversations(); // Refresh the conversation list
-      }
+      //   await chatApi.createNewChat(title, messages);
+      //   await fetchConversations(); // Refresh the conversation list
+      // }
 
+      await fetchConversations(); // Refresh the conversation list
       // Reset current chat state
       setMessages([{
         type: 'assistant',
@@ -337,6 +358,8 @@ const Chat = () => {
       setIsNewConversation(true);
       setMessage('');
       setSelectedDocuments([]);
+      setDocumentAnalysisId(null);
+      setIsDocumentAnalysis(false);
       
       if (window.innerWidth < 768) {
         setIsHistoryOpen(false);

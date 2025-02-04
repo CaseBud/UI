@@ -92,8 +92,9 @@ export const chatApi = {
       const requestBody = {
         query: content,
         conversationId: options.conversationId,
-        webSearch: options.webSearch || false,
-        context: options.context || null // Include context in request
+        webSearch: options.webSearch || false
+        // context: options.context || null // Include context in request 
+        // NIGGA i thought you said you didnt push any context stuff 💀
       };
 
       const response = await fetchWithToken('/api/chat/standard-conversation', {
@@ -116,9 +117,9 @@ export const chatApi = {
         message: response.message,
         conversationId: response.conversationId,
         responseId: response.responseId,
-        title: response.title,
-        webSources: response.webSources,
-        context: response.context // Return context from response
+        title: response.title
+        // webSources: response.webSources
+        // context: response.context // Return context from response
       };
     } catch (error) {
       console.error('Send message failed:', {
@@ -206,9 +207,9 @@ export const chatApi = {
         response: response.response || response.message,
         message: response.message,
         conversationId: response.conversationId,
-        title: response.title,
-        webSources: [], // Empty array for document analysis mode
-        context: response.context || null
+        title: response.title
+        // webSources: [] // Empty array for document analysis mode
+        // context: response.context || null
       };
     } catch (error) {
       console.error('Document analysis failed:', {
@@ -220,7 +221,7 @@ export const chatApi = {
       throw error;
     }
   },
-
+//this endpoint doesn't even exist 💀
   createNewChat: async (title, messages) => {
     try {
       const response = await fetchWithToken('/api/chat', {
