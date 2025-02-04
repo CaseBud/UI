@@ -143,12 +143,7 @@ export const chatApi = {
         return [];
       }
 
-      return response.conversations.map(conv => ({
-        id: conv._id,
-        title: conv.title,
-        created_at: conv.createdAt,
-        updated_at: conv.updatedAt,
-      }));
+      return response;
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
       throw error;
@@ -167,7 +162,10 @@ export const chatApi = {
         ...response.conversation,
         messages: response.messages.map(msg => ({
           id: msg._id,
-          content: msg.response,
+          content: {
+            query: msg.query,
+            response: msg.response,
+          },
           // {
           //   query: msg.query,
           //   response: msg.response
@@ -222,26 +220,7 @@ export const chatApi = {
     }
   },
 //this endpoint doesn't even exist 💀
-  createNewChat: async (title, messages) => {
-    try {
-      const response = await fetchWithToken('/api/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          messages: messages.map(msg => ({
-            content: msg.content,
-            type: msg.type,
-            timestamp: msg.timestamp
-          }))
-        })
-      });
 
-      return response;
-    } catch (error) {
-      console.error('Failed to create new chat:', error);
-      throw error;
-    }
-  },
 };
 
 export const documentsApi = {

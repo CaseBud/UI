@@ -86,7 +86,10 @@ const Chat = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([{
     type: 'assistant',
-    content: defaultGreeting
+    content: {
+      response: defaultGreeting,
+      query: null
+    }
   }]);
   const [isTyping, setIsTyping] = useState(false);
   const chatContainerRef = useRef(null);
@@ -116,11 +119,25 @@ const Chat = () => {
 
   const fetchConversations = async () => {
     try {
-      const conversations = await chatApi.getConversations();
+      const response = await chatApi.getConversations();
+
+      // Check if response exists
+      if (!response?.conversations) {
+        console.warn('No data in response');
+        return [];
+      }
+
+      const conversations = response.conversations.map(conv => ({
+        _id: conv._id, // Keep the original _id
+        id: conv._id,  // Add id for compatibility
+        title: conv.title,
+        created_at: conv.createdAt,
+        updated_at: conv.updatedAt,
+      }));
       setConversations(conversations);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
-      // Optionally show error notification to user
+      throw error;
     }
   };
 
@@ -181,7 +198,10 @@ const Chat = () => {
           const lastIndex = newMessages.length - 1;
           newMessages[lastIndex] = {
             ...newMessages[lastIndex],
-            content: currentText,
+            content: {
+              ...newMessages[lastIndex].content,
+              response: currentText
+            },
             timestamp: new Date()
           };
           return newMessages;
@@ -252,7 +272,14 @@ const Chat = () => {
   const sendMessage = async (content) => {
     if (!content?.trim() || isTyping) return;
   
-    const newUserMessage = { type: 'user', content, timestamp: new Date() };
+    const newUserMessage = { 
+      type: 'user', 
+      content: {
+        query: content,
+        response: null
+      }, 
+      timestamp: new Date() 
+    };
     
     try {
       setMessages(prev => [...prev, newUserMessage]);
@@ -263,6 +290,8 @@ const Chat = () => {
   
       if (isDocumentAnalysis) {
         try {
+          localStorage.removeItem('lastConversationId');
+          localStorage.removeItem('currentChatMessages');
           response = await chatApi.sendDocumentAnalysis(
             content.trim(),
             activeDocuments.length > 0 ? activeDocuments : null,
@@ -277,7 +306,10 @@ const Chat = () => {
           // Add empty assistant message for document analysis
           setMessages(prev => [...prev, {
             type: 'assistant',
-            content: '',
+            content: {
+              query: null,
+              response: ''
+            },
             timestamp: new Date()
           }]);
         } catch (docError) {
@@ -302,7 +334,10 @@ const Chat = () => {
         // Add empty assistant message with web sources for regular chat
         setMessages(prev => [...prev, {
           type: 'assistant',
-          content: '',
+          content: {
+            query: null,
+            response: ''
+          },
           webSources: [],
           timestamp: new Date()
         }]);
@@ -348,7 +383,10 @@ const Chat = () => {
       // Reset current chat state
       setMessages([{
         type: 'assistant',
-        content: defaultGreeting,
+        content: {
+          response: defaultGreeting,
+          query: null
+        },
         timestamp: new Date()
       }]);
       setCurrentconversationId(null);
@@ -387,7 +425,10 @@ const Chat = () => {
       // Clear current chat state when entering incognito mode
       setMessages([{
         type: 'assistant',
-        content: defaultGreeting,
+        content: {
+          response: defaultGreeting,
+          query: null
+        },
         timestamp: new Date()
       }]);
       setCurrentconversationId(null);
@@ -421,7 +462,7 @@ const Chat = () => {
   
     const handleCopy = async () => {
       try {
-        await navigator.clipboard.writeText(message.content);
+        await navigator.clipboard.writeText(message.content.response);
         setIsCopied(true);
         
         // Reset the "Copied!" message after 2 seconds
@@ -467,7 +508,7 @@ const Chat = () => {
         
         <div className="flex flex-col max-w-[75%] md:max-w-[65%] space-y-1">
           <div className={`px-3 py-2 ${messageTypeClasses}`}>
-            <p className="whitespace-pre-wrap text-sm">{message.content}</p>
+            <p className="whitespace-pre-wrap text-sm">{message.content.response}</p>
             
             {/* Document Preview */}
             {message.document && <DocumentPreview document={message.document} />}
@@ -615,6 +656,27 @@ const Chat = () => {
         throw new Error('Chat not found');
       }
 
+      // Transform messages to match the new structure
+      const formattedMessages = [];
+      conversation.messages.forEach(msg => {
+        if (msg.content.query) {
+          formattedMessages.push({
+        type: 'user',
+        content: {
+          query: msg.content.query
+        },
+        timestamp: msg.timestamp
+          });
+        }
+        formattedMessages.push({
+          type: 'assistant',
+          content: {
+        response: msg.content.response
+          },
+          timestamp: msg.timestamp
+        });
+      });
+
       if (conversation.type === 'document-analysis') {
         setDocumentAnalysisId(conversation._id);
         setIsDocumentAnalysis(true);
@@ -623,9 +685,10 @@ const Chat = () => {
         setIsDocumentAnalysis(false);
         setCurrentconversationId(conversation._id);
       }
+      
       localStorage.setItem('lastConversationId', conversationId);
-      localStorage.setItem('currentChatMessages', JSON.stringify(conversation.messages));
-      setMessages(conversation.messages);
+      localStorage.setItem('currentChatMessages', JSON.stringify(formattedMessages));
+      setMessages(formattedMessages);
       setIsNewConversation(false);
     } catch (error) {
       console.error('Failed to fetch chat:', error);
@@ -709,12 +772,26 @@ const Chat = () => {
         {/* Messages Container - Updated padding and spacing */}
         <div className="flex-1 overflow-y-auto bg-slate-900">
           <div className="max-w-3xl mx-auto py-4 space-y-3">
-            {messages.map((msg, index) => (
-              <MessageBubble 
-                key={`${msg.type}-${index}`}
-                message={msg}
-                isMobile={isMobile()}
-              />
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-lg p-4 ${
+                    message.type === 'user'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-700/50 text-slate-200'
+                  }`}
+                >
+                  {/* Show query for user messages, response for assistant messages */}
+                  <p className="whitespace-pre-wrap text-sm">
+                    {message.type === 'user' 
+                      ? message.content.query 
+                      : message.content.response}
+                  </p>
+                </div>
+              </div>
             ))}
             {isTyping && (
               <div className="flex items-start gap-2 px-2">

@@ -159,17 +159,17 @@ const ChatHistory = ({
                   <div className="space-y-2 p-4">
                     {filteredConversations.map((chat) => (
                       <div 
-                        key={chat.id}
+                        key={chat._id || chat.id}
                         className={`group p-3 rounded-lg cursor-pointer transition-all
-                                  ${currentconversationId === chat.id 
+                                  ${(currentconversationId === (chat._id || chat.id))
                                     ? 'bg-blue-600 text-white' 
                                     : 'hover:bg-slate-700/50 text-slate-300'}`}
                       >
-                        {editingId === chat.id ? (
+                        {editingId === (chat._id || chat.id) ? (
                           <form 
                             onSubmit={(e) => {
                               e.preventDefault();
-                              handleEditSubmit(chat.id);
+                              handleEditSubmit(chat._id || chat.id);
                             }}
                             className="flex items-center space-x-2"
                           >
@@ -192,7 +192,7 @@ const ChatHistory = ({
                           <div className="flex items-center justify-between">
                             <div 
                               className="flex-1 min-w-0 cursor-pointer"
-                              onClick={() => onSelectChat(chat.id)}
+                              onClick={() => onSelectChat(chat._id || chat.id)}
                             >
                               <h3 className="font-medium text-sm leading-5 truncate">
                                 {chat.title}
@@ -202,7 +202,7 @@ const ChatHistory = ({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setEditingId(chat.id);
+                                  setEditingId(chat._id || chat.id);
                                   setNewTitle(chat.title);
                                 }}
                                 className="p-1 rounded hover:bg-slate-600/50 transition-colors"
@@ -215,7 +215,7 @@ const ChatHistory = ({
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onDeleteChat(chat.id);
+                                  onDeleteChat(chat._id || chat.id);
                                 }}
                                 className="p-1 rounded hover:bg-slate-600/50 transition-colors"
                               >
