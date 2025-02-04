@@ -41,6 +41,16 @@ const IconComponents = {
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
     </svg>
   ),
+  ChevronRight: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  ),
+  Tools: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+    </svg>
+  ),
 };
 
 
@@ -72,6 +82,7 @@ const Chat = () => {
   const [activeDocuments, setActiveDocuments] = useState([]); // Add this new state
   const [isWebMode, setIsWebMode] = useState(false); // Add new state for web browsing mode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isToolsOpen, setIsToolsOpen] = useState(false);
 
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
@@ -360,8 +371,13 @@ const Chat = () => {
   const handleNewChat = createNewChat;
 
   const handleVoiceInput = (text) => {
-    // This will be implemented when the backend is ready
-    setMessage(text);
+    if (typeof text === 'string') {
+      setMessage(text);
+      // Auto submit after voice transcription
+      sendMessage(text);
+    } else {
+      setMessage(text.target.value);
+    }
   };
 
   const toggleIncognitoMode = () => {
@@ -605,65 +621,105 @@ const Chat = () => {
         {/* Input Area - Added padding bottom for mobile */}
         <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-16 md:pb-4">
           <div className="max-w-2xl mx-auto p-4">
-            <form onSubmit={handleSubmit} className="relative">
-              <textarea
-                ref={inputRef}
-                value={message}
-                onChange={handleMessageChange}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                    // Reset height after sending
-                    e.target.style.height = '44px';
-                  }
-                }}
-                placeholder={isTempUser ? "Register to chat..." : 
-                           isWebMode ? "Search the web..." : 
-                           "Ask any legal question..."}
-                className="w-full rounded-lg pl-3 pr-28 py-2 
-                         bg-slate-700/50 border border-slate-600/50 
-                         text-white placeholder-slate-400 text-sm
-                         resize-none overflow-hidden
-                         leading-normal transition-all duration-200"
-                disabled={isTyping || isTempUser}
-                rows="1"
-                style={{ height: '44px' }} // Default height
-              />
-              
-              {/* Action buttons container with adjusted spacing */}
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 
-                            flex items-center gap-2 md:gap-3"> {/* Increased gap */}
-                <VoiceChat 
-                  onVoiceInput={handleMessageChange} 
+            <form onSubmit={handleSubmit} className="relative space-y-2">
+              <div className="relative">
+                <textarea
+                  ref={inputRef}
+                  value={message}
+                  onChange={handleMessageChange}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                      // Reset height after sending
+                      e.target.style.height = '44px';
+                    }
+                  }}
+                  placeholder={isTempUser ? "Register to chat..." : 
+                            isWebMode ? "Search the web for legal information..." : 
+                            "Ask any legal question..."}
+                  className={`w-full rounded-lg pl-3 pr-20 py-2 
+                            bg-slate-700/50 border text-white placeholder-slate-400 
+                            text-sm resize-none overflow-hidden leading-normal 
+                            transition-all duration-200
+                            ${isWebMode 
+                              ? 'border-blue-500/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20' 
+                              : 'border-slate-600/50 focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20'
+                            }`}
                   disabled={isTyping || isTempUser}
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsWebMode(!isWebMode)}
-                  className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
-                           ${isWebMode ? 'bg-blue-500 text-white' : 
-                             'text-slate-400 hover:text-white'}`}
-                  disabled={isTempUser}
-                >
-                  <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
-
-                <DocumentUploader 
-                  onDocumentSelect={handleDocumentSelect} 
-                  onUploadComplete={handleUploadComplete}
-                  className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
-                  disabled={isTempUser}
+                  rows="1"
+                  style={{ height: '44px' }} // Default height
                 />
                 
-                <button 
-                  type="submit"
-                  disabled={isTyping || !message.trim() || isTempUser}
-                  className="p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-white 
-                           disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <IconComponents.Send className="w-4 h-4 md:w-5 md:h-5" />
-                </button>
+                {/* Action buttons container with adjusted spacing */}
+                <div className="absolute right-2 top-0 h-full flex items-center gap-1.5">
+                  <div className="relative">
+                    {/* Tools Menu Button */}
+                    <button
+                      type="button"
+                      onClick={() => setIsToolsOpen(!isToolsOpen)}
+                      className={`p-1.5 rounded-lg transition-all duration-200 flex items-center justify-center
+                                ${isToolsOpen ? 'bg-slate-700/50 text-white' : 'text-slate-400 hover:text-white'}`}
+                      title="Show tools"
+                    >
+                      <IconComponents.Tools className="w-4 h-4" />
+                    </button>
+
+                    {/* Expandable Tools Menu */}
+                    <div className={`absolute bottom-full right-0 mb-2 transition-all duration-200 transform
+                                    ${isToolsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
+                                    bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm`}>
+                      <div className="p-2 flex items-center gap-2">
+                        <VoiceChat 
+                          onVoiceInput={handleVoiceInput} 
+                          disabled={isTyping || isTempUser}
+                          onSubmit={sendMessage}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsWebMode(!isWebMode)}
+                          className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
+                                    ${isWebMode 
+                                      ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50' 
+                                      : 'text-slate-400 hover:text-white'}`}
+                          disabled={isTempUser}
+                          title={isWebMode ? "Web search enabled" : "Enable web search"}
+                        >
+                          <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
+                        </button>
+                        <DocumentUploader 
+                          onDocumentSelect={handleDocumentSelect} 
+                          onUploadComplete={handleUploadComplete}
+                          className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
+                          disabled={isTempUser}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Send Button */}
+                  <button 
+                    type="submit"
+                    disabled={isTyping || !message.trim() || isTempUser}
+                    className="p-1.5 rounded-lg transition-colors flex items-center justify-center
+                              text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <IconComponents.Send className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Web Search Indicator - Moved below input */}
+                {isWebMode && (
+                  <div className="flex items-center gap-1.5 text-xs text-blue-400/90">
+                    <IconComponents.Globe className="w-3 h-3" />
+                    <span className="flex items-center gap-1">
+                      Web search enabled
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                        beta
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
             </form>
           </div>
