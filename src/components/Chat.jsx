@@ -360,6 +360,8 @@ const Chat = () => {
       setSelectedDocuments([]);
       setDocumentAnalysisId(null);
       setIsDocumentAnalysis(false);
+      localStorage.removeItem('lastConversationId');
+      localStorage.removeItem('currentChatMessages');
       
       if (window.innerWidth < 768) {
         setIsHistoryOpen(false);
@@ -668,6 +670,8 @@ const Chat = () => {
         setIsDocumentAnalysis(false);
         setCurrentconversationId(conversation._id);
       }
+      localStorage.setItem('lastConversationId', conversationId);
+      localStorage.setItem('currentChatMessages', JSON.stringify(conversation.messages));
       setMessages(conversation.messages);
       setIsNewConversation(false);
     } catch (error) {
