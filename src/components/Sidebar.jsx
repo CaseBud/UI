@@ -80,7 +80,7 @@ const Sidebar = ({ user, onSelectPrompt }) => {
           </div>
         </div>
 
-        
+        <br /><br /><br /><br /><br /><br />
 
         {!isAuthenticated && (
           <div className="p-4">

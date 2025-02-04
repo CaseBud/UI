@@ -602,8 +602,8 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Input Area - More compact */}
-        <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm">
+        {/* Input Area - Added padding bottom for mobile */}
+        <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-16 md:pb-4">
           <div className="max-w-2xl mx-auto p-4">
             <form onSubmit={handleSubmit} className="relative">
               <textarea
@@ -686,7 +686,7 @@ const Chat = () => {
           onClose={toggleHistory}
         />
       </div>
-
+          
       {/* Mobile Navigation */}
       <MobileNav
         user={user}
@@ -696,9 +696,9 @@ const Chat = () => {
         onClose={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Mobile Bottom Bar - Fixed positioning */}
+      {/* Mobile Bottom Bar - Added top border and spacing */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50">
-        <div className="flex items-center justify-around p-2">
+        <div className="flex items-center justify-around p-3">
           <button
             onClick={handleNewChat}
             className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
