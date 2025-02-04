@@ -460,20 +460,53 @@ const Chat = () => {
             {/* Document Preview */}
             {message.document && <DocumentPreview document={message.document} />}
             
-            {/* Web Sources */}
+            {/* Updated Web Sources UI */}
             {message.webSources && message.webSources.length > 0 && (
-              <div className="mt-2 border-t border-slate-600/50 pt-2">
-                <p className="text-xs text-slate-400 mb-1">Sources:</p>
-                <div className="space-y-1">
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center gap-2 text-slate-400 text-xs">
+                  <IconComponents.Globe className="w-3 h-3" />
+                  <span>Web sources:</span>
+                </div>
+                <div className="space-y-2">
                   {message.webSources.map((source, index) => (
                     <a
                       key={index}
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-xs text-blue-400 hover:text-blue-300 truncate"
+                      className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
+                               hover:bg-slate-700/50 transition-colors"
                     >
-                      {source.title || source.url}
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 mt-1">
+                          <div className="w-3 h-3 rounded-full bg-blue-500/20 flex items-center justify-center">
+                            <span className="text-[10px] text-blue-400 font-medium">
+                              {index + 1}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm text-blue-400 font-medium truncate">
+                            {source.title || 'Web Source'}
+                          </h4>
+                          <p className="text-xs text-slate-400 truncate">
+                            {source.url}
+                          </p>
+                        </div>
+                        <svg 
+                          className="w-3 h-3 text-slate-400 flex-shrink-0 mt-1"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                          <polyline points="15 3 21 3 21 9" />
+                          <line x1="10" y1="14" x2="21" y2="3" />
+                        </svg>
+                      </div>
                     </a>
                   ))}
                 </div>
