@@ -19,9 +19,7 @@ const ChatHistory = ({
   const sortedConversations = React.useMemo(() => {
     if (!Array.isArray(conversations)) return [];
     
-    return [...conversations].sort((a, b) => 
-      new Date(b.created_at) - new Date(a.created_at)
-    );
+    return conversations; // comes sorted from backend o
   }, [conversations]);
 
   // Fix filtering with null check
