@@ -147,6 +147,10 @@ const Chat = () => {
     };
   }, []);
 
+  useEffect(() => {
+    chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const fetchConversations = async () => {
     try {
       const response = await chatApi.getConversations();
@@ -486,6 +490,9 @@ const Chat = () => {
       if (window.innerWidth < 768) {
         setIsHistoryOpen(false);
       }
+
+      // Scroll to bottom after creating a new chat
+      chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch (error) {
       console.error('Failed to create new chat:', error);
     }
@@ -739,6 +746,9 @@ const Chat = () => {
           createNewChat();
         }
       }
+
+      // Scroll to bottom after restoring chat
+      chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     restoreChat();
@@ -937,7 +947,7 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Input Area - Adjusted padding bottom */}
+      {/* Input Area - Adjusted padding bottom */}
         <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-6 md:pb-0">
           <div className="max-w-2xl mx-auto p-4">
             <form onSubmit={handleSubmit} className="relative space-y-2">
