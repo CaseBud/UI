@@ -113,12 +113,29 @@ const Chat = () => {
   const [isWebMode, setIsWebMode] = useState(false); // Add new state for web browsing mode
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const historyRef = useRef(null);
 
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
       fetchConversations();
     }
   }, [isIncognito, isHistoryOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Only handle outside clicks on desktop
+      if (window.innerWidth >= 768) {
+        if (historyRef.current && !historyRef.current.contains(event.target)) {
+          setIsHistoryOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchConversations = async () => {
     try {
@@ -627,7 +644,7 @@ const Chat = () => {
     }
   }, [messages, currentconversationId]);
 
-  // Update handleSelectChat to handle errors better
+  // Modify handleSelectChat to close history on desktop
   const handleSelectChat = async (conversationId) => {
     if (isIncognito) return;
 
@@ -690,6 +707,11 @@ const Chat = () => {
       localStorage.setItem('currentChatMessages', JSON.stringify(formattedMessages));
       setMessages(formattedMessages);
       setIsNewConversation(false);
+
+      // Add this to close history on desktop after selecting chat
+      if (window.innerWidth >= 768) {
+        setIsHistoryOpen(false);
+      }
     } catch (error) {
       console.error('Failed to fetch chat:', error);
       
@@ -952,15 +974,18 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Single Chat History component for both mobile and desktop */}
-      <div className={`
-        fixed inset-y-0 right-0 
-        md:block 
-        transition-transform duration-300 ease-in-out
-        ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}
-        ${isMobile() ? 'w-full md:w-72' : 'hidden w-72'}
-        z-50
-      `}>
+      {/* Update the ChatHistory wrapper div */}
+      <div 
+        ref={historyRef}
+        className={`
+          fixed inset-y-0 right-0 
+          md:block 
+          transition-transform duration-300 ease-in-out
+          ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}
+          ${isMobile() ? 'w-full md:w-72' : 'hidden w-72'}
+          z-50
+        `}
+      >
         <ChatHistory
           conversations={conversations}
           onSelectChat={handleSelectChat}
