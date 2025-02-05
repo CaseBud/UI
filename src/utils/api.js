@@ -117,7 +117,8 @@ export const chatApi = {
         message: response.message,
         conversationId: response.conversationId,
         responseId: response.responseId,
-        title: response.title
+        title: response.title,
+        isWebSearch: response.webSearch
         // webSources: response.webSources
         // context: response.context // Return context from response
       };
@@ -166,7 +167,8 @@ export const chatApi = {
             query: msg.query,
             response: msg.response,
           },
-          documents: msg.documentIds.length > 0 ? msg.documentIds.map(doc => ({ name: doc.name, type: doc.type })) : [],
+          documents: msg.documentIds && msg.documentIds.length > 0 ? msg.documentIds.map(doc => ({ name: doc.name, type: doc.type })) : [],
+          isWebSearch: msg.webSearch,
           // {
           //   query: msg.query,
           //   response: msg.response

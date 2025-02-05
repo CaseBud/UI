@@ -68,7 +68,17 @@ const IconComponents = {
   ),
   Wikipedia: (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-.782.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z"/>
+      <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-1.023.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z"/>
+    </svg>
+  ),
+  Google: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8c1.93 0 3.68.68 5.07 1.81L14.1 9.9c-.56-.56-1.32-.9-2.1-.9-1.66 0-3 1.34-3 3s1.34 3 3 3c1.38 0 2.54-.93 2.87-2.18H12v-2.82h5.64c.09.5.14 1.01.14 1.54 0 4.41-3.59 8-8 8z"/>
+    </svg>
+  ),
+  Facebook: (props) => (
+    <svg {...props} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.675 0H1.325C.593 0 0 .593 0 1.325v21.351C0 23.407.593 24 1.325 24H12.82v-9.294H9.692v-3.622h3.128V8.413c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.794.715-1.794 1.763v2.31h3.587l-.467 3.622h-3.12V24h6.116c.73 0 1.324-.593 1.324-1.324V1.325C24 .593 23.407 0 22.675 0z"/>
     </svg>
   ),
   Default: (props) => (
@@ -261,6 +271,17 @@ const Chat = () => {
       const newActiveDocuments = [...prev, document._id];
       return newActiveDocuments;
     });
+    if (!isDocumentAnalysis) {
+      setMessages(prev => [...prev, {
+        type: 'system',
+        content: {
+          response: 'Switched to document analysis chat',
+        },
+        documents: [],
+        timestamp: new Date()
+      }]);
+    }
+    setIsWebMode(false);
     setIsDocumentAnalysis(true);
 
     setMessages(prev => [...prev, {
@@ -353,6 +374,24 @@ const Chat = () => {
           }]);
         }
       } else {
+        if (documentAnalysisId || localStorage.getItem('lastConversationId')) {
+          if (documentAnalysisId && localStorage.getItem('lastConversationId', null) !== documentAnalysisId) {
+            setMessages(prev => [...prev, {
+              type: 'system',
+              content: {response: 'Switched to general conversation mode'},
+              documents: [],
+              timestamp: new Date()
+            }]);
+          }
+          if (isWebMode) {
+            setMessages(prev => [...prev, {
+              type: 'system',
+              content: {response: 'Switched to web browsing mode (beta)'},
+              documents: [],
+              timestamp: new Date()
+            }]);
+          }
+        }
         setDocumentAnalysisId(null);
         setIsDocumentAnalysis(false);
         response = await chatApi.sendMessage(content.trim(), { 
@@ -360,18 +399,32 @@ const Chat = () => {
           webSearch: isWebMode
         });
         setCurrentconversationId(response.conversationId);
+        if (isWebMode) {
+          setMessages(prev => [...prev, {
+            type: 'system',
+            content: {response:'Searching the web for relevant sources...'},
+            timestamp: new Date()
+          }]);
+        }
         
         const assistantMessage = {
-          type: 'assistant',
+          type: isWebMode ? 'system' : 'assistant',
           content: {
             query: content,
             response: response.response || response.message
           },
-          webSources: [],
+          isWebSearch: isWebMode,
           timestamp: new Date()
         };
+        
+        if (isWebMode) {
+          // Update: Don't add empty assistant message here
+          // Instead, wait for the actual response
+          await showResponseGradually(messages[messages.length - 1].content.response);
+        }
 
         setMessages(prev => [...prev, assistantMessage]);
+
         await showResponseGradually(response.response || response.message);
       }
 
@@ -522,7 +575,8 @@ const Chat = () => {
       try {
         const hostname = new URL(url).hostname.toLowerCase();
         if (hostname.includes('wikipedia.org')) return 'Wikipedia';
-        // Add more site checks here
+        if (hostname.includes('google.com')) return 'Google';
+        if (hostname.includes('facebook.com')) return 'Facebook';
         return 'Default';
       } catch {
         return 'Default';
@@ -559,10 +613,66 @@ const Chat = () => {
             {/* Document Preview - Inside the message bubble */}
             {message.documents && message.documents.length > 0 && (
               <div className="mt-3 border-t border-slate-500/30 pt-3">
-                <DocumentPreview documents={message.documents} />
+                {message.documents.map((doc, index) => (
+                  <DocumentPreview key={index} document={doc} />
+                ))}
               </div>
             )}
           </div>
+          
+          {!(message.type === 'user') && (message.type === 'system' || message.type === 'assistant') && (
+            <div className="mt-2 space-y-2">
+              {/* Show web sources if they exist */}
+              {message.isWebSearch && (
+                <>
+                  <div className="flex items-center gap-1.5 px-1">
+                    <IconComponents.Globe className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-xs font-medium text-blue-400">Web References</span>
+                  </div>
+                  <div className="space-y-2">
+                    {[
+                      {
+                        url: 'https://www.google.com/',
+                        title: 'Google Search Results'
+                      },
+                      {
+                        url: 'https://wikipedia.org/',
+                        title: 'Wikipedia Reference'
+                      },
+                      {
+                        url: 'https://facebook.com/',
+                        title: 'Public Information'
+                      },
+                    ].map((source, index) => {
+                      const SiteIcon = IconComponents[getSiteIcon(source.url)];
+                      return (
+                        <a
+                          key={index}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
+                                   hover:bg-slate-700/50 transition-colors"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 w-4 h-4 mt-0.5 text-slate-400">
+                              <SiteIcon className="w-full h-full" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm text-blue-400 font-medium truncate mb-0.5">
+                                {source.title || 'Web Source'}
+                              </h4>
+                              <p className="text-xs text-slate-400 truncate">{source.url}</p>
+                            </div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           
           {/* Timestamp */}
           <div className={`flex items-center gap-2 text-xs text-slate-400 ${
@@ -666,27 +776,43 @@ const Chat = () => {
         formattedMessages.push({
           type: 'system',
           content: {
-            response: 'Documents:',
+            response: 'Uploaded documents:',
           },   
           documents,       
           timestamp: new Date()
         });
       }
       conversation.messages.forEach(msg => {
+        // First add the user message if it exists
         if (msg.content.query) {
           formattedMessages.push({
-        type: 'user',
-        content: {
-          query: msg.content.query
-        },
-        timestamp: msg.timestamp
+            type: 'user',
+            content: {
+              query: msg.content.query
+            },
+            timestamp: msg.timestamp
           });
         }
+
+        // Then add web search indicator before the response if it's a web search
+        if (msg.isWebSearch) {
+          formattedMessages.push({
+            type: 'system',
+            content: {
+              response: 'Sources:'
+            },
+            isWebSearch: true,
+            timestamp: msg.timestamp
+          });
+        }
+
+        // Finally add the assistant response
         formattedMessages.push({
-          type: 'assistant',
+          type: msg.isWebSearch ? 'system' : 'assistant',
           content: {
-        response: msg.content.response
+            response: msg.content.response
           },
+          isWebSearch: msg.isWebSearch,
           timestamp: msg.timestamp
         });
       });
@@ -795,62 +921,7 @@ const Chat = () => {
         <div className="flex-1 overflow-y-auto bg-slate-900">
           <div className="max-w-3xl mx-auto py-4 space-y-3">
             {messages.map((message, index) => (
-              <div key={index} className="group flex items-end gap-2 px-2">
-                {/* Assistant/System Avatar - Adjusted size */}
-                {(message.type === 'assistant' || message.type === 'system') && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mb-1">
-                    {message.type === 'system' ? (
-                      <IconComponents.System className="w-5 h-5 text-white" />
-                    ) : (
-                      <IconComponents.MessageCircle className="w-5 h-5 text-white" />
-                    )}
-                  </div>
-                )}
-                
-                <div className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-1 ${
-                  message.type === 'user' ? 'ml-auto' : ''
-                }`}>
-                  <div className={`px-3 py-2 ${
-                    message.type === 'user'
-                      ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
-                      : message.type === 'system'
-                      ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
-                      : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
-                  }`}>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {message.type === 'user' ? message.content.query : message.content.response}
-                    </p>
-                    
-                    {/* Document Preview - Inside the message bubble */}
-                    {message.documents && message.documents.length > 0 && message.type === 'system' && (
-                      <div className="mt-3 border-t border-slate-500/30 pt-3">
-                        {message.documents.map((doc, index) => (
-                          <DocumentPreview key={index} document={doc} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Timestamp */}
-                  <div className={`flex items-center gap-2 text-xs text-slate-400 ${
-                    message.type === 'user' ? 'justify-end' : 'justify-start'
-                  }`}>
-                    <span className="opacity-60">
-                      {new Date(message.timestamp).toLocaleTimeString([], { 
-                        hour: '2-digit', 
-                        minute: '2-digit'
-                      })}
-                    </span>
-                  </div>
-                </div>
-
-                {/* User Avatar - Also adjusted size for consistency */}
-                {message.type === 'user' && (
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mb-1">
-                    <IconComponents.User className="w-5 h-5 text-white" />
-                  </div>
-                )}
-              </div>
+              <MessageBubble key={index} message={message} />
             ))}
             {isTyping && (
               <div className="flex items-start gap-2 px-2">
@@ -866,11 +937,11 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Input Area - Added padding bottom for mobile */}
-        <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-16 md:pb-4">
+        {/* Input Area - Adjusted padding bottom */}
+        <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-6 md:pb-0">
           <div className="max-w-2xl mx-auto p-4">
             <form onSubmit={handleSubmit} className="relative space-y-2">
-              <div className="relative">
+              <div className="relative mb-4">
                 <textarea
                   ref={inputRef}
                   value={message}
@@ -925,7 +996,13 @@ const Chat = () => {
                         />
                         <button
                           type="button"
-                          onClick={() => setIsWebMode(!isWebMode)}
+                          onClick={() => {
+                            if (!isWebMode) {
+                              setDocumentAnalysisId(null);
+                              setIsDocumentAnalysis(false);
+                            }
+                            setIsWebMode(!isWebMode)
+                          }}
                           className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
                                     ${isWebMode 
                                       ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50' 
@@ -956,13 +1033,15 @@ const Chat = () => {
                   </button>
                 </div>
 
-                {/* Web Search Indicator - Moved below input */}
+                {/* Web Search Indicator - Update positioning */}
                 {isWebMode && (
-                  <div className="flex items-center gap-1.5 text-xs text-blue-400/90">
+                  <div className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
+                                  transform transition-all duration-300 ease-in-out opacity-100">
                     <IconComponents.Globe className="w-3 h-3" />
                     <span className="flex items-center gap-1">
                       Web search enabled
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] 
+                                      bg-blue-500/10 border border-blue-500/20 text-blue-400">
                         beta
                       </span>
                     </span>
@@ -1020,7 +1099,13 @@ const Chat = () => {
           </button>
 
           <button
-            onClick={() => setIsWebMode(!isWebMode)}
+            onClick={() => {
+              if (!isWebMode) {
+                setDocumentAnalysisId(null);
+                setIsDocumentAnalysis(false);
+              }
+              setIsWebMode(!isWebMode)
+            }}
             className={`p-2 rounded-lg transition-colors ${
               isWebMode ? 'text-blue-400' : 'text-slate-400'
             }`}
