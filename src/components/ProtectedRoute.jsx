@@ -4,19 +4,21 @@ import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+    const { isAuthenticated, loading } = useAuth();
+    const location = useLocation();
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+    if (loading) {
+        return <LoadingSpinner />;
+    }
 
-  if (!isAuthenticated) {
-    // Save the attempted URL for redirecting after login
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
-  }
+    if (!isAuthenticated) {
+        // Save the attempted URL for redirecting after login
+        return (
+            <Navigate to="/login" state={{ from: location.pathname }} replace />
+        );
+    }
 
-  return children;
+    return children;
 };
 
 export default ProtectedRoute;
