@@ -14,7 +14,7 @@ const DocumentIcon = () => (
 
 const ProgressRing = ({ progress }) => {
   const radius = 10;
-  const strokeWidth = 2;
+  const strokeWidth = 1;
   const normalizedRadius = radius - strokeWidth;
   const circumference = normalizedRadius * 2 * Math.PI;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
@@ -29,8 +29,8 @@ const ProgressRing = ({ progress }) => {
           fill="transparent"
           strokeWidth={strokeWidth}
           r={normalizedRadius}
-          cx={radius + 2}
-          cy={radius + 2}
+          cx={radius}
+          cy={radius}
         />
         {/* Progress circle */}
         <circle

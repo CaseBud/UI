@@ -166,6 +166,7 @@ export const chatApi = {
             query: msg.query,
             response: msg.response,
           },
+          documents: msg.documentIds.length > 0 ? msg.documentIds.map(doc => ({ name: doc.name, type: doc.type })) : [],
           // {
           //   query: msg.query,
           //   response: msg.response
@@ -205,7 +206,7 @@ export const chatApi = {
         response: response.response || response.message,
         message: response.message,
         conversationId: response.conversationId,
-        title: response.title
+        title: response.title,
         // webSources: [] // Empty array for document analysis mode
         // context: response.context || null
       };

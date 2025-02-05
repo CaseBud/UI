@@ -18,6 +18,11 @@ const IconComponents = {
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
   </svg>
   ),
+  System: (props) => (
+    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+    </svg>
+  ),
   Send: (props) => (
     <svg {...props} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
@@ -112,9 +117,6 @@ const Chat = () => {
   useEffect(() => {
     if (!isIncognito && isHistoryOpen) {
       fetchConversations();
-      // Set up periodic refresh every 30 seconds
-      const refreshInterval = setInterval(fetchConversations, 30000);
-      return () => clearInterval(refreshInterval);
     }
   }, [isIncognito, isHistoryOpen]);
 
@@ -185,8 +187,8 @@ const Chat = () => {
     setIsTyping(true);
     const characters = response.split('');
     let currentText = '';
-    const charDelay = 7; // Decrease for faster typing
-    const variation = 10; // Decrease for less variation in typing speed
+    const charDelay = 7;
+    const variation = 10;
     
     try {
       for (let i = 0; i < characters.length; i++) {
@@ -197,20 +199,20 @@ const Chat = () => {
         setMessages(prev => {
           const newMessages = [...prev];
           const lastIndex = newMessages.length - 1;
-          newMessages[lastIndex] = {
-            ...newMessages[lastIndex],
-            content: {
-              ...newMessages[lastIndex].content,
-              response: currentText
-            },
-            timestamp: new Date()
-          };
+          if (lastIndex >= 0 && newMessages[lastIndex].type === 'assistant') {
+            newMessages[lastIndex] = {
+              ...newMessages[lastIndex],
+              content: {
+                ...newMessages[lastIndex].content,
+                response: currentText
+              }
+            };
+          }
           return newMessages;
         });
 
-        // Add slight pause at punctuation marks
         if (['.', '?', '!', ',', ';'].includes(characters[i])) {
-          await new Promise(resolve => setTimeout(resolve, 75)); // Decrease pause duration
+          await new Promise(resolve => setTimeout(resolve, 75));
         }
       }
     } finally {
@@ -246,8 +248,10 @@ const Chat = () => {
 
     setMessages(prev => [...prev, {
       type: 'system',
-      content: 'Document uploaded and ready for analysis. You can now ask questions about this document.',
-      document: document,
+      content: {
+        response: 'Document uploaded and ready for analysis. You can now ask questions about this document.',
+      },
+      documents: [document],
       timestamp: new Date()
     }]);
   };
@@ -304,48 +308,58 @@ const Chat = () => {
           }
           setActiveDocuments([]); // Clear documents
           setDocumentAnalysisId(response.conversationId);
-          // Add empty assistant message for document analysis
-          setMessages(prev => [...prev, {
+          setIsDocumentAnalysis(true);
+
+          // Update: Don't add empty assistant message here
+          // Instead, wait for the actual response
+          const assistantMessage = {
             type: 'assistant',
             content: {
-              query: null,
-              response: ''
+              query: content,
+              response: response.response || response.message
+            },
+            documents: [],
+            timestamp: new Date()
+          };
+
+          setMessages(prev => [...prev, assistantMessage]);
+          await showResponseGradually(response.response || response.message);
+
+        } catch (docError) {
+          console.error('Document analysis error details:', docError);
+          setMessages(prev => [...prev, {
+            type: 'error',
+            content: {
+              response:'Document analysis failed. Please try again.',
             },
             timestamp: new Date()
           }]);
-        } catch (docError) {
-            console.error('Document analysis error details:', docError); // Enhanced error log
-            setMessages(prev => [...prev, {
-              type: 'error',
-              content: 'Document analysis failed. Please try again.',
-              timestamp: new Date()
-            }]);
         }
       } else {
-        setDocumentAnalysisId(null); // Reset document analysis ID
+        setDocumentAnalysisId(null);
         setIsDocumentAnalysis(false);
-        // Regular chat with optional web search
         response = await chatApi.sendMessage(content.trim(), { 
           conversationId: currentconversationId,
           webSearch: isWebMode
         });
         setCurrentconversationId(response.conversationId);
-        console.log(currentconversationId);
-
-        // Add empty assistant message with web sources for regular chat
-        setMessages(prev => [...prev, {
+        
+        const assistantMessage = {
           type: 'assistant',
           content: {
-            query: null,
-            response: ''
+            query: content,
+            response: response.response || response.message
           },
           webSources: [],
           timestamp: new Date()
-        }]);
+        };
 
+        setMessages(prev => [...prev, assistantMessage]);
+        await showResponseGradually(response.response || response.message);
       }
-  
-      await showResponseGradually(response.response || response.message || 'No response received');
+
+      localStorage.setItem('lastConversationId', response.conversationId);
+      localStorage.setItem('currentChatMessages', JSON.stringify(messages));
   
     } catch (error) {
       console.error('Chat error:', error);
@@ -484,7 +498,7 @@ const Chat = () => {
       : isError
       ? 'bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl'
       : isSystem
-      ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto max-w-md'
+      ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
       : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
   
     const getSiteIcon = (url) => {
@@ -500,93 +514,56 @@ const Chat = () => {
 
     return (
       <div className={`group flex items-end gap-2 px-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
-        {/* Assistant Avatar - Only show on first message or after user message */}
-        {!isUser && (
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mb-1">
-            <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+        {/* Assistant/System Avatar - Adjusted size */}
+        {(message.type === 'assistant' || message.type === 'system') && (
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mb-1">
+            {message.type === 'system' ? (
+              <IconComponents.System className="w-5 h-5 text-white" />
+            ) : (
+              <IconComponents.MessageCircle className="w-5 h-5 text-white" />
+            )}
           </div>
         )}
         
-        <div className="flex flex-col max-w-[75%] md:max-w-[65%] space-y-1">
-          <div className={`px-3 py-2 ${messageTypeClasses}`}>
-            <p className="whitespace-pre-wrap text-sm">{message.content.response}</p>
+        <div className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-1 ${
+          message.type === 'user' ? 'ml-auto' : ''
+        }`}>
+          <div className={`px-3 py-2 ${
+            message.type === 'user'
+              ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
+              : message.type === 'system'
+              ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
+              : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
+          }`}>
+            <p className="whitespace-pre-wrap text-sm">
+              {message.type === 'user' ? message.content.query : message.content.response}
+            </p>
             
-            {/* Document Preview */}
-            {message.document && <DocumentPreview document={message.document} />}
+            {/* Document Preview - Inside the message bubble */}
+            {message.documents && message.documents.length > 0 && (
+              <div className="mt-3 border-t border-slate-500/30 pt-3">
+                <DocumentPreview documents={message.documents} />
+              </div>
+            )}
           </div>
-
-          {/* Web Sources - Moved outside the message bubble for better visibility */}
-          {!isUser && message.webSources && message.webSources.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <div className="flex items-center gap-1.5 px-1">
-                <IconComponents.Globe className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-xs font-medium text-blue-400">Web References</span>
-              </div>
-              <div className="space-y-2">
-                {message.webSources.map((source, index) => {
-                  const SiteIcon = IconComponents[getSiteIcon(source.url)];
-                  return (
-                    <a
-                      key={index}
-                      href={source.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
-                               hover:bg-slate-700/50 transition-colors"
-                    >
-                      <div className="flex items-start gap-2">
-                        {/* Site Icon */}
-                        <div className="flex-shrink-0 w-4 h-4 mt-0.5 text-slate-400">
-                          <SiteIcon className="w-full h-full" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm text-blue-400 font-medium truncate mb-0.5">
-                            {source.title || 'Web Source'}
-                          </h4>
-                          <p className="text-xs text-slate-400 truncate">{source.url}</p>
-                        </div>
-                      </div>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Timestamp and Copy Button Row */}
-          <div className={`flex items-center gap-2 text-xs text-slate-400 ${isUser ? 'justify-end' : 'justify-start'}`}>
+          
+          {/* Timestamp */}
+          <div className={`flex items-center gap-2 text-xs text-slate-400 ${
+            message.type === 'user' ? 'justify-end' : 'justify-start'
+          }`}>
             <span className="opacity-60">
               {new Date(message.timestamp).toLocaleTimeString([], { 
                 hour: '2-digit', 
                 minute: '2-digit'
               })}
             </span>
-            
-            {/* Copy button for assistant messages */}
-            {!isUser && !isError && !isSystem && (
-              <button
-                onClick={handleCopy}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-slate-700/50 rounded"
-              >
-                {isCopied ? (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                      d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                  </svg>
-                )}
-              </button>
-            )}
           </div>
         </div>
   
-        {/* User Avatar */}
-        {isUser && (
-          <div className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center mb-1">
-            <IconComponents.User className="w-4 h-4 text-white" />
+        {/* User Avatar - Also adjusted size for consistency */}
+        {message.type === 'user' && (
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mb-1">
+            <IconComponents.User className="w-5 h-5 text-white" />
           </div>
         )}
       </div>
@@ -596,6 +573,9 @@ const Chat = () => {
 
   // Add toggle function for history
   const toggleHistory = () => {
+    if (!isHistoryOpen) {
+      fetchConversations();
+    }
     setIsHistoryOpen(!isHistoryOpen);
   };
 
@@ -659,6 +639,22 @@ const Chat = () => {
 
       // Transform messages to match the new structure
       const formattedMessages = [];
+      if (conversation.type === 'document-analysis') {
+        const documents = [];
+
+        conversation.messages.forEach(msg => {
+          documents.push(...msg.documents);
+        });
+        
+        formattedMessages.push({
+          type: 'system',
+          content: {
+            response: 'Documents:',
+          },   
+          documents,       
+          timestamp: new Date()
+        });
+      }
       conversation.messages.forEach(msg => {
         if (msg.content.query) {
           formattedMessages.push({
@@ -681,13 +677,16 @@ const Chat = () => {
       if (conversation.type === 'document-analysis') {
         setDocumentAnalysisId(conversation._id);
         setIsDocumentAnalysis(true);
+        setCurrentconversationId(null);
+        localStorage.setItem('lastConversationId', conversation._id);
       } else {
         setDocumentAnalysisId(null);
         setIsDocumentAnalysis(false);
         setCurrentconversationId(conversation._id);
+        localStorage.setItem('lastConversationId', conversation._id);
       }
       
-      localStorage.setItem('lastConversationId', conversationId);
+      localStorage.setItem('lastConversationId', conversation._id);
       localStorage.setItem('currentChatMessages', JSON.stringify(formattedMessages));
       setMessages(formattedMessages);
       setIsNewConversation(false);
@@ -775,10 +774,14 @@ const Chat = () => {
           <div className="max-w-3xl mx-auto py-4 space-y-3">
             {messages.map((message, index) => (
               <div key={index} className="group flex items-end gap-2 px-2">
-                {/* Assistant Avatar - Only show for assistant messages */}
-                {message.type === 'assistant' && (
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center mb-1">
-                    <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+                {/* Assistant/System Avatar - Adjusted size */}
+                {(message.type === 'assistant' || message.type === 'system') && (
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mb-1">
+                    {message.type === 'system' ? (
+                      <IconComponents.System className="w-5 h-5 text-white" />
+                    ) : (
+                      <IconComponents.MessageCircle className="w-5 h-5 text-white" />
+                    )}
                   </div>
                 )}
                 
@@ -788,11 +791,22 @@ const Chat = () => {
                   <div className={`px-3 py-2 ${
                     message.type === 'user'
                       ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
+                      : message.type === 'system'
+                      ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
                       : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
                   }`}>
                     <p className="whitespace-pre-wrap text-sm">
                       {message.type === 'user' ? message.content.query : message.content.response}
                     </p>
+                    
+                    {/* Document Preview - Inside the message bubble */}
+                    {message.documents && message.documents.length > 0 && message.type === 'system' && (
+                      <div className="mt-3 border-t border-slate-500/30 pt-3">
+                        {message.documents.map((doc, index) => (
+                          <DocumentPreview key={index} document={doc} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                   
                   {/* Timestamp */}
@@ -808,10 +822,10 @@ const Chat = () => {
                   </div>
                 </div>
 
-                {/* User Avatar */}
+                {/* User Avatar - Also adjusted size for consistency */}
                 {message.type === 'user' && (
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center mb-1">
-                    <IconComponents.User className="w-4 h-4 text-white" />
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mb-1">
+                    <IconComponents.User className="w-5 h-5 text-white" />
                   </div>
                 )}
               </div>

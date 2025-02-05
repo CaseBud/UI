@@ -7,7 +7,6 @@ const ChatHistory = ({
   onEditTitle,
   onNewChat,
   isOpen,
-  currentconversationId,
   onClose 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -161,7 +160,7 @@ const ChatHistory = ({
                       <div 
                         key={chat._id || chat.id}
                         className={`group p-3 rounded-lg cursor-pointer transition-all
-                                  ${(currentconversationId === (chat._id || chat.id))
+                                  ${(localStorage.getItem('lastConversationId', '') === (chat._id || chat.id))
                                     ? 'bg-blue-600 text-white' 
                                     : 'hover:bg-slate-700/50 text-slate-300'}`}
                       >
