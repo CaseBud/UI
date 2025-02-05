@@ -48,6 +48,7 @@ const VoiceChat = ({ onVoiceInput, disabled, onSubmit }) => {
         try {
             const formData = new FormData();
             formData.append('file', audioBlob);
+            console.log(audioBlob);
 
             const response = await fetchWithToken(
                 '/api/transcribe',
@@ -55,8 +56,8 @@ const VoiceChat = ({ onVoiceInput, disabled, onSubmit }) => {
                     method: 'POST',
                     body: formData
                 },
-                true
-            ); // Skip content-type header
+                true // Skip content-type header for file upload
+            );
 
             if (response.status === 'success' && response.data?.transcript) {
                 // Update input field and trigger chat submission
