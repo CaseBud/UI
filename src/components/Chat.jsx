@@ -245,7 +245,9 @@ const Chat = () => {
     }, []);
 
     useEffect(() => {
-        chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [messages]);
 
     const fetchConversations = async () => {
@@ -323,16 +325,30 @@ const Chat = () => {
         setIsTyping(true);
         const characters = response.split('');
         let currentText = '';
-        const charDelay = 7;
-        const variation = 10;
+        const charDelay = 5;
+        const variation = 7;
+        const maxTypingTime = 10000; // 10 seconds
+        const startTime = Date.now();
 
         try {
+            if (isWebMode) {
+                return;
+            }
             for (let i = 0; i < characters.length; i++) {
+                if (i == 0) {
+                    setIsTyping(false);
+                }
+                const elapsedTime = Date.now() - startTime;
+                if (elapsedTime > maxTypingTime) {
+                    currentText = response;
+                    break;
+                }
+                
                 await new Promise((resolve) => setTimeout(resolve, charDelay));
                 await new Promise((resolve) =>
                     setTimeout(resolve, Math.random() * variation)
                 );
-
+                
                 currentText += characters[i];
                 setMessages((prev) => {
                     const newMessages = [...prev];
@@ -351,12 +367,29 @@ const Chat = () => {
                     }
                     return newMessages;
                 });
-
+                
                 if (['.', '?', '!', ',', ';'].includes(characters[i])) {
                     await new Promise((resolve) => setTimeout(resolve, 75));
                 }
             }
         } finally {
+            setMessages((prev) => {
+                const newMessages = [...prev];
+                const lastIndex = newMessages.length - 1;
+                if (
+                    lastIndex >= 0 &&
+                    newMessages[lastIndex].type === 'assistant'
+                ) {
+                    newMessages[lastIndex] = {
+                        ...newMessages[lastIndex],
+                        content: {
+                            ...newMessages[lastIndex].content,
+                            response: response
+                        }
+                    };
+                }
+                return newMessages;
+            });
             setIsTyping(false);
         }
     };
@@ -569,25 +602,24 @@ const Chat = () => {
                             timestamp: new Date()
                         }
                     ]);
+                    // await showResponseGradually(
+                    //     messages[messages.length - 1].content.response
+                    // );
                 }
 
                 const assistantMessage = {
                     type: isWebMode ? 'system' : 'assistant',
                     content: {
-                        query: content,
                         response: response.response || response.message
                     },
                     isWebSearch: isWebMode,
                     timestamp: new Date()
                 };
 
-                if (isWebMode) {
-                    // Update: Don't add empty assistant message here
-                    // Instead, wait for the actual response
-                    await showResponseGradually(
-                        messages[messages.length - 1].content.response
-                    );
-                }
+                // if (isWebMode) {
+                //     // Update: Don't add empty assistant message here
+                //     // Instead, wait for the actual response
+                // }
 
                 setMessages((prev) => [...prev, assistantMessage]);
 
@@ -795,11 +827,16 @@ const Chat = () => {
                                   : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
                         }`}
                     >
-                        <p className="whitespace-pre-wrap text-sm">
-                            {message.type === 'user'
-                                ? message.content.query
-                                : message.content.response}
-                        </p>
+                        {/* Show typing animation only if message is empty and isTyping is true */}
+                        {message.content.response === '' && isTyping ? (
+                            <TypingAnimation />
+                        ) : (
+                            <p className="whitespace-pre-wrap text-sm">
+                                {message.type === 'user'
+                                    ? message.content.query
+                                    : message.content.response}
+                            </p>
+                        )}
 
                         {/* Document Preview - Inside the message bubble */}
                         {message.documents && message.documents.length > 0 && (
