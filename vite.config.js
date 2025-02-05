@@ -1,17 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// https://vitejs.dev/config/
 export default defineConfig({
     plugins: [react()],
-    base: '/', // Set the base path for assets
+    base: '/',
     build: {
-        outDir: 'dist' // Ensure the output directory is correct
+        outDir: 'dist',
+        rollupOptions: {
+            output: {
+                manualChunks: undefined,
+            },
+        },
     },
     server: {
+        historyApiFallback: true,
         proxy: {
             '/api': {
-                target: 'https://case-bud-backend.vercel.app',
+                target: 'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net',
                 changeOrigin: true,
                 secure: false
             }
