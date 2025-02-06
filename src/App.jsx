@@ -7,10 +7,10 @@ import VerifyOTP from './components/VerifyOTP';
 import ProtectedRoute from './components/ProtectedRoute';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-import useGoatCounter from './useGoatCounter';
+ 
 
 const App = () => {
-    useGoatCounter();
+  
     return (
         <BrowserRouter>
             <Routes>
