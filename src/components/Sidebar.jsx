@@ -109,6 +109,15 @@ const Sidebar = ({ user, onSelectPrompt }) => {
                             <p>• Provide context when needed</p>
                             <p>• Request case law citations</p>
                         </div>
+                                <br />
+                        <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">
+                            Tools
+                        </h3>
+                        <div className="space-y-2 text-sm text-slate-300">
+                            <p>• Document Upload</p>
+                            <p>• Web Search Powered Response</p>
+                            <p>• Voice Chat</p>
+                        </div>
                     </div>
                 </div>
 
