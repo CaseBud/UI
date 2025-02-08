@@ -9,6 +9,8 @@ const VerifyOTP = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [countdown, setCountdown] = useState(30);
     const [canResend, setCanResend] = useState(false);
+    const [resendLoading, setResendLoading] = useState(false);
+    const [resendSuccess, setResendSuccess] = useState(false);
 
     // Get email from navigation state or localStorage
     const email =
@@ -106,11 +108,14 @@ const VerifyOTP = () => {
     };
 
     const handleResendOtp = async () => {
-        if (!canResend) return;
+        if (!canResend || !email) return;
 
         try {
+            setResendLoading(true);
+            setError('');
+            
             const response = await fetch(
-                'https://case-bud-backend.onrender.com/api/auth/resend-verification',
+                'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/auth/resend-verification',
                 {
                     method: 'POST',
                     headers: {
@@ -120,15 +125,22 @@ const VerifyOTP = () => {
                 }
             );
 
+            const data = await response.json();
+
             if (response.ok) {
+                setResendSuccess(true);
                 setCountdown(30);
                 setCanResend(false);
+                
+                // Clear success message after 5 seconds
+                setTimeout(() => setResendSuccess(false), 5000);
             } else {
-                const data = await response.json();
-                setError(data.message || 'Failed to resend OTP');
+                setError(data.message || 'Failed to resend verification code');
             }
         } catch (err) {
             setError('Network error. Please try again.');
+        } finally {
+            setResendLoading(false);
         }
     };
 
@@ -203,6 +215,7 @@ const VerifyOTP = () => {
                                 {email || 'your email'}
                             </span>
                         </p>
+                        
                     </div>
 
                     {error && (
@@ -224,11 +237,11 @@ const VerifyOTP = () => {
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+                    <form onSubmit={handleSubmit} className="mt-8 space-y-">
                         <div className="space-y-2">
                             <input
                                 type="text"
-                                placeholder="Enter 6-digit OTP"
+                                
                                 className="w-full px-4 py-3 text-center text-2xl tracking-[1em] rounded-lg border border-slate-600 bg-slate-800/50 text-white placeholder-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
                                 onChange={handleOtpChange}
                                 value={otp}
@@ -286,19 +299,31 @@ const VerifyOTP = () => {
                         </button>
                     </form>
 
-                    <div className="text-center">
+                    <div className="text-center space-y-2">
+                        {resendSuccess && (
+                            <p className="text-sm text-green-400 animate-fadeIn">
+                                New verification code sent! Please check your email.
+                            </p>
+                        )}
                         <button
                             onClick={handleResendOtp}
-                            disabled={!canResend}
-                            className={`text-sm transition-colors duration-200 ${
-                                canResend
-                                    ? 'text-blue-400 hover:text-blue-300'
-                                    : 'text-slate-500 cursor-not-allowed'
-                            }`}
+                            disabled={!canResend || resendLoading}
+                            className={`text-sm transition-colors duration-200 flex items-center justify-center mx-auto gap-2
+                            ${canResend && !resendLoading
+                                ? 'text-blue-400 hover:text-blue-300'
+                                : 'text-slate-500 cursor-not-allowed'}`}
                         >
-                            {canResend
-                                ? 'Resend verification code'
-                                : `Resend available in ${countdown}s`}
+                            {resendLoading && (
+                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                            )}
+                            {resendLoading
+                                ? 'Sending...'
+                                : canResend
+                                    ? 'Resend verification code'
+                                    : `Resend available in ${countdown}s`}
                         </button>
                     </div>
                 </div>
