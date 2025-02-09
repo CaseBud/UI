@@ -797,6 +797,20 @@ const Chat = () => {
             }
         };
 
+        const formatTextWithBold = (text) => {
+            const parts = text.split(/(\*\*[^*]+\*\*)/g);
+            return parts.map((part, index) => {
+                if (part.startsWith('**') && part.endsWith('**')) {
+                    return (
+                        <strong key={index}>
+                            {part.slice(2, -2)}
+                        </strong>
+                    );
+                }
+                return part;
+            });
+        };
+
         return (
             <div
                 className={`group flex items-end gap-2 px-2 ${isUser ? 'justify-end' : 'justify-start'}`}
@@ -834,7 +848,7 @@ const Chat = () => {
                             <p className="whitespace-pre-wrap text-sm">
                                 {message.type === 'user'
                                     ? message.content.query
-                                    : message.content.response}
+                                    : formatTextWithBold(message.content.response)}
                             </p>
                         )}
 
