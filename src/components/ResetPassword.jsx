@@ -66,6 +66,9 @@ const ResetPassword = () => {
                     <p className="mt-2 text-slate-400">
                         Enter the verification code and your new password
                     </p>
+                    <p className="mt-2 text-slate-400">
+                        <i>Didn't receive a code? Check your spam</i>
+                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">

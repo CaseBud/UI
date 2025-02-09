@@ -215,7 +215,9 @@ const VerifyOTP = () => {
                                 {email || 'your email'}
                             </span>
                         </p>
-                        
+                        <p className="mt-2 text-slate-400">
+                            <i>Didn't receive a code? Check your spam</i>
+                        </p>
                     </div>
 
                     {error && (
@@ -249,7 +251,7 @@ const VerifyOTP = () => {
                                 required
                             />
                             <div className="flex justify-center mt-2">
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 mb-4">
                                     {[...Array(6)].map((_, i) => (
                                         <div
                                             key={i}
