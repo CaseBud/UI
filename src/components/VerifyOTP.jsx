@@ -304,7 +304,7 @@ const VerifyOTP = () => {
                             <p className="text-sm text-green-400 animate-fadeIn">
                                 New verification code sent! Please check your email.
                             </p>
-                        )}
+                 )}
                         <button
                             onClick={handleResendOtp}
                             disabled={!canResend || resendLoading}
