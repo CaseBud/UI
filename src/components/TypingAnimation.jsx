@@ -7,7 +7,7 @@ const TypingAnimation = () => {
     React.useEffect(() => {
         const interval = setInterval(() => {
             setCurrentText((prev) => (prev + 1) % texts.length);
-        }, 2000);
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
