@@ -1310,9 +1310,10 @@ const Chat = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                    <path d="M5 8l6 6 6-6" />
+                                    <path d="M4 21h16" />
+                                    <path d="M9 3h6" />
+                                    <path d="M12 3v18" />
                                 </svg>
                             </button>
                             
@@ -1553,10 +1554,6 @@ const Chat = () => {
                                                             <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                                                         </svg>
                                                     </button>
-                                                    <LanguageSelector
-                                                        selectedLanguage={language}
-                                                        onLanguageChange={handleLanguageChange}
-                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowDocumentCreator(true)}
