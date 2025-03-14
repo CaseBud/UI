@@ -7,6 +7,11 @@ import TypingAnimation from './TypingAnimation'; // Ensure this import is correc
 import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
 import VoiceChat from './VoiceChat';
+import VoiceToVoice from './VoiceToVoice';
+import TextToSpeech from './TextToSpeech';
+import ReasoningModeToggle from './ReasoningModeToggle';
+import LanguageSelector from './LanguageSelector';
+import DocumentCreator from './DocumentCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MobileNav from './MobileNav';
 import MobileBottomBar from './MobileBottomBar'; // Ensure this import is correct
@@ -220,6 +225,15 @@ const Chat = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const historyRef = useRef(null);
+    
+    // New state variables for the new features
+    const [isDetailedMode, setIsDetailedMode] = useState(false);
+    const [language, setLanguage] = useState('en-US');
+    const [showDocumentCreator, setShowDocumentCreator] = useState(false);
+    const [documents, setDocuments] = useState([]);
+    const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
+    const [currentSpeakingMessage, setCurrentSpeakingMessage] = useState(null);
+    const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
 
     useEffect(() => {
         if (!isIncognito && isHistoryOpen) {
@@ -238,13 +252,24 @@ const Chat = () => {
                     setIsHistoryOpen(false);
                 }
             }
+            
+            // Close language dropdown when clicking outside
+            const languageDropdown = document.getElementById('language-dropdown-button');
+            if (
+                isLanguageDropdownOpen && 
+                languageDropdown && 
+                !languageDropdown.contains(event.target) &&
+                !event.target.closest('.language-dropdown-menu')
+            ) {
+                setIsLanguageDropdownOpen(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, []);
+    }, [isLanguageDropdownOpen]);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -481,6 +506,43 @@ const Chat = () => {
         }
     };
 
+    // Add handler functions for the new features
+    const handleDetailedModeToggle = (isDetailed) => {
+        setIsDetailedMode(isDetailed);
+    };
+    
+    const handleLanguageChange = (lang) => {
+        setLanguage(lang);
+    };
+    
+    const handleDocumentCreate = (newDocument) => {
+        setDocuments([...documents, newDocument]);
+        setShowDocumentCreator(false);
+    };
+    
+    const handleTextToSpeechToggle = () => {
+        setIsTextToSpeechEnabled(!isTextToSpeechEnabled);
+        
+        // Cancel any ongoing speech when toggling off
+        if (isTextToSpeechEnabled) {
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(null);
+        }
+    };
+    
+    const handleSpeakMessage = (messageContent) => {
+        if (currentSpeakingMessage === messageContent) {
+            // If already speaking this message, stop it
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(null);
+        } else {
+            // Stop any current speech and speak the new message
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(messageContent);
+        }
+    };
+
+    // Modify the sendMessage function to include the new features
     const sendMessage = async (content) => {
         if (!content?.trim() || isTyping) return;
 
@@ -589,7 +651,9 @@ const Chat = () => {
                 setIsDocumentAnalysis(false);
                 response = await chatApi.sendMessage(content.trim(), {
                     conversationId: currentconversationId,
-                    webSearch: isWebMode
+                    webSearch: isWebMode,
+                    language: language,
+                    detailedMode: isDetailedMode
                 });
                 setCurrentconversationId(response.conversationId);
                 if (isWebMode) {
@@ -635,6 +699,12 @@ const Chat = () => {
                 'currentChatMessages',
                 JSON.stringify(messages)
             );
+
+            // If text-to-speech is enabled, speak the response
+            if (isTextToSpeechEnabled) {
+                const responseText = response.response || response.message;
+                setCurrentSpeakingMessage(responseText);
+            }
         } catch (error) {
             console.error('Chat error:', error);
             setIsTyping(false);
@@ -931,6 +1001,26 @@ const Chat = () => {
                             </div>
                         )}
 
+                    {/* Message Actions */}
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Copy button */}
+                        <button
+                            onClick={handleCopy}
+                            className="p-1 text-xs text-slate-400 hover:text-white rounded"
+                            title="Copy to clipboard"
+                        >
+                            {isCopied ? 'Copied!' : 'Copy'}
+                        </button>
+                        
+                        {/* Text-to-speech button for assistant messages */}
+                        {message.type === 'assistant' && message.content.response && (
+                            <TextToSpeech 
+                                text={message.content.response} 
+                                language={language}
+                            />
+                        )}
+                    </div>
+
                     {/* Timestamp */}
                     <div
                         className={`flex items-center gap-2 text-xs text-slate-400 ${
@@ -1202,6 +1292,65 @@ const Chat = () => {
 
                     {/* Right side controls - Updated for mobile */}
                     <div className="flex-1 flex justify-end items-center space-x-2">
+                        {/* Language Dropdown in Header */}
+                        <div className="relative">
+                            <button
+                                id="language-dropdown-button"
+                                onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
+                                className="flex items-center gap-1 p-2 hover:bg-slate-700/50 rounded-lg transition-colors text-slate-300"
+                                title="Select language"
+                            >
+                                <span className="hidden sm:inline text-xs font-medium">{language.split('-')[0].toUpperCase()}</span>
+                                <svg
+                                    className="w-4 h-4 text-slate-400"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                    <circle cx="12" cy="12" r="10" />
+                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                </svg>
+                            </button>
+                            
+                            {isLanguageDropdownOpen && (
+                                <div className="language-dropdown-menu absolute right-0 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm z-50">
+                                    <div className="p-2 space-y-1">
+                                        {[
+                                            { code: 'en-US', name: 'English (US)' },
+                                            { code: 'es-ES', name: 'Español' },
+                                            { code: 'fr-FR', name: 'Français' },
+                                            { code: 'de-DE', name: 'Deutsch' },
+                                            { code: 'it-IT', name: 'Italiano' },
+                                            { code: 'pt-BR', name: 'Português' },
+                                            { code: 'zh-CN', name: '中文' },
+                                            { code: 'ja-JP', name: '日本語' },
+                                            { code: 'ko-KR', name: '한국어' },
+                                            { code: 'ru-RU', name: 'Русский' }
+                                        ].map((lang) => (
+                                            <button
+                                                key={lang.code}
+                                                onClick={() => {
+                                                    handleLanguageChange(lang.code);
+                                                    setIsLanguageDropdownOpen(false);
+                                                }}
+                                                className={`w-full text-left px-3 py-1.5 rounded-md text-sm ${
+                                                    language === lang.code
+                                                        ? 'bg-blue-600/20 text-blue-400'
+                                                        : 'text-slate-300 hover:bg-slate-700/50'
+                                                }`}
+                                            >
+                                                {lang.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
                         <button
                             onClick={toggleHistory}
                             className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
@@ -1313,56 +1462,123 @@ const Chat = () => {
                                     ${isToolsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
                                     bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm`}
                                         >
-                                            <div className="p-2 flex items-center gap-2">
-                                                <VoiceChat
-                                                    onVoiceInput={
-                                                        handleVoiceInput
-                                                    }
-                                                    disabled={
-                                                        isTyping || isTempUser
-                                                    }
-                                                    onSubmit={sendMessage}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (!isWebMode) {
-                                                            setDocumentAnalysisId(
-                                                                null
-                                                            );
-                                                            setIsDocumentAnalysis(
-                                                                false
-                                                            );
+                                            <div className="p-2 flex flex-col gap-2">
+                                                <div className="flex items-center gap-2">
+                                                    <VoiceChat
+                                                        onVoiceInput={
+                                                            handleVoiceInput
                                                         }
-                                                        setIsWebMode(
-                                                            !isWebMode
-                                                        );
-                                                    }}
-                                                    className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
+                                                        disabled={
+                                                            isTyping || isTempUser
+                                                        }
+                                                        onSubmit={sendMessage}
+                                                    />
+                                                    <VoiceToVoice
+                                                        onVoiceInput={
+                                                            handleVoiceInput
+                                                        }
+                                                        disabled={
+                                                            isTyping || isTempUser
+                                                        }
+                                                        onSubmit={sendMessage}
+                                                        language={language}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (!isWebMode) {
+                                                                setDocumentAnalysisId(
+                                                                    null
+                                                                );
+                                                                setIsDocumentAnalysis(
+                                                                    false
+                                                                );
+                                                            }
+                                                            setIsWebMode(
+                                                                !isWebMode
+                                                            );
+                                                        }}
+                                                        className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
                                     ${
                                         isWebMode
                                             ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50'
                                             : 'text-slate-400 hover:text-white'
                                     }`}
-                                                    disabled={isTempUser}
-                                                    title={
-                                                        isWebMode
-                                                            ? 'Web search enabled'
-                                                            : 'Enable web search'
-                                                    }
-                                                >
-                                                    <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
-                                                </button>
-                                                <DocumentUploader
-                                                    onDocumentSelect={
-                                                        handleDocumentSelect
-                                                    }
-                                                    onUploadComplete={
-                                                        handleUploadComplete
-                                                    }
-                                                    className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
-                                                    disabled={isTempUser}
-                                                />
+                                                        disabled={isTempUser}
+                                                        title={
+                                                            isWebMode
+                                                                ? 'Web search enabled'
+                                                                : 'Enable web search'
+                                                        }
+                                                    >
+                                                        <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
+                                                    </button>
+                                                    <DocumentUploader
+                                                        onDocumentSelect={
+                                                            handleDocumentSelect
+                                                        }
+                                                        onUploadComplete={
+                                                            handleUploadComplete
+                                                        }
+                                                        className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
+                                                        disabled={isTempUser}
+                                                    />
+                                                </div>
+                                                <div className="border-t border-slate-700/50 pt-2 flex items-center gap-2">
+                                                    <ReasoningModeToggle
+                                                        isDetailed={isDetailedMode}
+                                                        onChange={handleDetailedModeToggle}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleTextToSpeechToggle}
+                                                        className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 ${
+                                                            isTextToSpeechEnabled
+                                                                ? 'text-blue-400 bg-blue-500/20 ring-1 ring-blue-500/50'
+                                                                : 'text-slate-400 hover:text-white'
+                                                        }`}
+                                                        title={isTextToSpeechEnabled ? 'Disable text-to-speech' : 'Enable text-to-speech'}
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4 md:w-5 md:h-5"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        >
+                                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                                                        </svg>
+                                                    </button>
+                                                    <LanguageSelector
+                                                        selectedLanguage={language}
+                                                        onLanguageChange={handleLanguageChange}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowDocumentCreator(true)}
+                                                        className="p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-white"
+                                                        title="Create new document"
+                                                    >
+                                                        <svg
+                                                            className="w-4 h-4 md:w-5 md:h-5"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                        >
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                                            <polyline points="14 2 14 8 20 8" />
+                                                            <line x1="12" y1="18" x2="12" y2="12" />
+                                                            <line x1="9" y1="15" x2="15" y2="15" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1383,7 +1599,7 @@ const Chat = () => {
                                 </div>
 
                                 {/* Web Search Indicator - Update positioning */}
-                                {isWebMode && (
+                                {isWebMode && !isDetailedMode && (
                                     <div
                                         className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
                                   transform transition-all duration-300 ease-in-out opacity-100"
@@ -1398,6 +1614,51 @@ const Chat = () => {
                                                 beta
                                             </span>
                                         </span>
+                                    </div>
+                                )}
+                                
+                                {/* Detailed Reasoning Mode Indicator */}
+                                {isDetailedMode && !isWebMode && (
+                                    <div
+                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-purple-400/90
+                                  transform transition-all duration-300 ease-in-out opacity-100"
+                                    >
+                                        <svg
+                                            className="w-3 h-3"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                        </svg>
+                                        <span className="flex items-center gap-1">
+                                            Detailed reasoning enabled
+                                        </span>
+                                    </div>
+                                )}
+                                
+                                {/* Combined Indicators when both are enabled */}
+                                {isDetailedMode && isWebMode && (
+                                    <div
+                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
+                                  transform transition-all duration-300 ease-in-out opacity-100"
+                                    >
+                                        <div className="flex items-center gap-1.5">
+                                            <IconComponents.Globe className="w-3 h-3" />
+                                            <span className="flex items-center gap-1">
+                                                Web search with detailed reasoning
+                                                <span
+                                                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] 
+                                          bg-blue-500/10 border border-blue-500/20 text-blue-400"
+                                                >
+                                                    beta
+                                                </span>
+                                            </span>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1429,6 +1690,16 @@ const Chat = () => {
                     onClose={toggleHistory}
                 />
             </div>
+
+            {/* Document Creator Modal */}
+            {showDocumentCreator && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <DocumentCreator
+                        onDocumentCreate={handleDocumentCreate}
+                        onCancel={() => setShowDocumentCreator(false)}
+                    />
+                </div>
+            )}
 
             {/* Mobile Navigation */}
             <MobileNav
