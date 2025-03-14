@@ -2,7 +2,7 @@ import { authService } from '../services/authService';
 import { getAuthToken } from './auth';
 
 const BASE_URL =
-    'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net'; // Ensure this URL is correct
+    'https://case-bud-backend-1.onrender.com'; // Ensure this URL is correct
 
 export class ApiError extends Error {
     constructor(message, status) {

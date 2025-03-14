@@ -16,7 +16,7 @@ export default defineConfig({
         historyApiFallback: true,
         proxy: {
             '/api': {
-                target: 'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net',
+                target: 'https://case-bud-backend-1.onrender.com',
                 changeOrigin: true,
                 secure: false
             }
