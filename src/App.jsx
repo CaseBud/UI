@@ -7,6 +7,8 @@ import VerifyOTP from './components/VerifyOTP';
 import ProtectedRoute from './components/ProtectedRoute';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import DocumentEditor from './components/DocumentEditor';
+import DocumentList from './components/DocumentList';
  
 
 const App = () => {
@@ -27,6 +29,25 @@ const App = () => {
                     element={
                         <ProtectedRoute>
                             <Chat />
+                        </ProtectedRoute>
+                    }
+                />
+                
+                {/* Document Editor Routes */}
+                <Route
+                    path="/document-editor"
+                    element={
+                        <ProtectedRoute>
+                            <DocumentEditor />
+                        </ProtectedRoute>
+                    }
+                />
+                
+                <Route
+                    path="/documents"
+                    element={
+                        <ProtectedRoute>
+                            <DocumentList />
                         </ProtectedRoute>
                     }
                 />
