@@ -1,5 +1,6 @@
 import { authService } from '../services/authService';
 import { getAuthToken } from './auth';
+import { documentService } from '../services/documentService';
 
 const BASE_URL =
     'https://case-bud-backend-1.onrender.com'; // Ensure this URL is correct
@@ -284,6 +285,89 @@ export const documentsApi = {
                 response: error.response
             });
             throw error;
+        }
+    },
+    
+    // Document Editor API functions - using local storage until backend is ready
+    saveDocument: async (document) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.saveDocument(document);
+        } catch (error) {
+            console.error('Error saving document:', error);
+            throw error;
+        }
+    },
+    
+    getDocument: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            const document = documentService.getDocument(documentId);
+            
+            if (!document) {
+                throw new Error('Document not found');
+            }
+            
+            return document;
+        } catch (error) {
+            console.error('Error getting document:', error);
+            throw error;
+        }
+    },
+    
+    getDocuments: async () => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            const documents = documentService.getDocuments();
+            return { documents };
+        } catch (error) {
+            console.error('Error getting documents:', error);
+            throw error;
+        }
+    },
+    
+    deleteDocument: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.deleteDocument(documentId);
+        } catch (error) {
+            console.error('Error deleting document:', error);
+            throw error;
+        }
+    },
+    
+    getRevisions: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.getRevisions(documentId);
+        } catch (error) {
+            console.error('Error getting revisions:', error);
+            throw error;
+        }
+    },
+    
+    // AI Document Assistance API - placeholder until backend is ready
+    getAIAssistance: async (prompt, content, selectedText = null) => {
+        console.log('Getting AI assistance:', { prompt, selectedText });
+        
+        // Mock AI response with a delay to simulate processing
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (selectedText) {
+            // If text is selected, return enhanced version of that text
+            return {
+                suggestion: `${selectedText} [AI-enhanced based on prompt: "${prompt}"]`
+            };
+        } else {
+            // If no text is selected, return enhanced version of the entire content
+            return {
+                suggestion: `${content}\n\n[AI-enhanced based on prompt: "${prompt}"]`
+            };
         }
     }
 };

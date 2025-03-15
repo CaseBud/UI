@@ -97,6 +97,21 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                     </div>
                 </div>
 
+                <div className="px-2 pt-2 pb-3 space-y-1">
+                    <a
+                        href="/chat"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-white bg-slate-800/50 hover:bg-slate-700"
+                    >
+                        Chat
+                    </a>
+                    <a
+                        href="/document-editor"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+                    >
+                        Document Editor
+                    </a>
+                </div>
+
                 {user && (
                     <div className="absolute bottom-[72px] left-0 right-0 p-4 border-t border-slate-700/50">
                         <button

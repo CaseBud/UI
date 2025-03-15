@@ -164,7 +164,7 @@ const IconComponents = {
     ),
     Wikipedia: (props) => (
         <svg {...props} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-1.023.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z" />
+            <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-1.023.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z" />
         </svg>
     ),
     Google: (props) => (
@@ -885,27 +885,27 @@ const Chat = () => {
 
         return (
             <div
-                className={`group flex items-end gap-2 px-2 ${isUser ? 'justify-end' : 'justify-start'}`}
+                className={`group flex items-end gap-0.5 px-0.5 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
                 {/* Assistant/System Avatar - Adjusted size */}
                 {(message.type === 'assistant' ||
                     message.type === 'system') && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mb-1">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center mb-0">
                         {message.type === 'system' ? (
-                            <IconComponents.System className="w-5 h-5 text-white" />
+                            <IconComponents.System className="w-4 h-4 text-white" />
                         ) : (
-                            <IconComponents.MessageCircle className="w-5 h-5 text-white" />
+                            <IconComponents.MessageCircle className="w-4 h-4 text-white" />
                         )}
                     </div>
                 )}
 
                 <div
-                    className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-1 ${
+                    className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-0 ${
                         message.type === 'user' ? 'ml-auto' : ''
                     }`}
                 >
                     <div
-                        className={`px-3 py-2 ${
+                        className={`px-2.5 py-1.5 ${
                             message.type === 'user'
                                 ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
                                 : message.type === 'system'
@@ -926,7 +926,7 @@ const Chat = () => {
 
                         {/* Document Preview - Inside the message bubble */}
                         {message.documents && message.documents.length > 0 && (
-                            <div className="mt-3 border-t border-slate-500/30 pt-3">
+                            <div className="mt-2 border-t border-slate-500/30 pt-2">
                                 {message.documents.map((doc, index) => (
                                     <DocumentPreview
                                         key={index}
@@ -940,17 +940,17 @@ const Chat = () => {
                     {!(message.type === 'user') &&
                         (message.type === 'system' ||
                             message.type === 'assistant') && (
-                            <div className="mt-2 space-y-2">
+                            <div className="mt-0 space-y-0.5">
                                 {/* Show web sources if they exist */}
                                 {message.isWebSearch && (
                                     <>
-                                        <div className="flex items-center gap-1.5 px-1">
-                                            <IconComponents.Globe className="w-3.5 h-3.5 text-blue-400" />
+                                        <div className="flex items-center gap-1 px-1">
+                                            <IconComponents.Globe className="w-3 h-3 text-blue-400" />
                                             <span className="text-xs font-medium text-blue-400">
                                                 Web References
                                             </span>
                                         </div>
-                                        <div className="space-y-2">
+                                        <div className="space-y-0.5">
                                             {[
                                                 {
                                                     url: 'https://www.google.com/',
@@ -975,15 +975,15 @@ const Chat = () => {
                                                         href={source.url}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
+                                                        className="block p-1 rounded-lg bg-slate-800/50 border border-slate-700/50 
                                    hover:bg-slate-700/50 transition-colors"
                                                     >
-                                                        <div className="flex items-start gap-2">
-                                                            <div className="flex-shrink-0 w-4 h-4 mt-0.5 text-slate-400">
+                                                        <div className="flex items-start gap-1">
+                                                            <div className="flex-shrink-0 w-3.5 h-3.5 mt-0.5 text-slate-400">
                                                                 <SiteIcon className="w-full h-full" />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <h4 className="text-sm text-blue-400 font-medium truncate mb-0.5">
+                                                                <h4 className="text-xs text-blue-400 font-medium truncate mb-0">
                                                                     {source.title ||
                                                                         'Web Source'}
                                                                 </h4>
@@ -1002,14 +1002,23 @@ const Chat = () => {
                         )}
 
                     {/* Message Actions */}
-                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {/* Copy button */}
+                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Copy button with icon instead of text */}
                         <button
                             onClick={handleCopy}
-                            className="p-1 text-xs text-slate-400 hover:text-white rounded"
-                            title="Copy to clipboard"
+                            className="p-0.5 text-slate-400 hover:text-white rounded"
+                            title={isCopied ? "Copied!" : "Copy to clipboard"}
                         >
-                            {isCopied ? 'Copied!' : 'Copy'}
+                            {isCopied ? (
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 6L9 17l-5-5"></path>
+                                </svg>
+                            ) : (
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                </svg>
+                            )}
                         </button>
                         
                         {/* Text-to-speech button for assistant messages */}
@@ -1019,11 +1028,34 @@ const Chat = () => {
                                 language={language}
                             />
                         )}
+                        
+                        {/* Create document button for assistant messages */}
+                        {message.type === 'assistant' && message.content.response && (
+                            <button
+                                onClick={() => {
+                                    navigate('/document-editor', { 
+                                        state: { 
+                                            initialContent: message.content.response,
+                                            initialTitle: message.content.query || 'Chat Response'
+                                        } 
+                                    });
+                                }}
+                                className="p-0.5 text-slate-400 hover:text-white rounded"
+                                title="Create document from this response"
+                            >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                    <path d="M14 2v6h6" />
+                                    <path d="M16 13H8" />
+                                    <path d="M16 17H8" />
+                                </svg>
+                            </button>
+                        )}
                     </div>
 
                     {/* Timestamp */}
                     <div
-                        className={`flex items-center gap-2 text-xs text-slate-400 ${
+                        className={`flex items-center gap-0.5 text-xs text-slate-400 ${
                             message.type === 'user'
                                 ? 'justify-end'
                                 : 'justify-start'
@@ -1043,8 +1075,8 @@ const Chat = () => {
 
                 {/* User Avatar - Also adjusted size for consistency */}
                 {message.type === 'user' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mb-1">
-                        <IconComponents.User className="w-5 h-5 text-white" />
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center mb-0">
+                        <IconComponents.User className="w-4 h-4 text-white" />
                     </div>
                 )}
             </div>
@@ -1292,6 +1324,49 @@ const Chat = () => {
 
                     {/* Right side controls - Updated for mobile */}
                     <div className="flex-1 flex justify-end items-center space-x-2">
+                        {/* Document List Button */}
+                        <button
+                            onClick={() => navigate('/documents')}
+                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+                            title="My Documents"
+                        >
+                            <svg
+                                className="w-5 h-5 text-slate-400"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                                <path d="M14 2v6h6" />
+                                <path d="M16 13H8" />
+                                <path d="M16 17H8" />
+                                <path d="M10 9H8" />
+                            </svg>
+                        </button>
+                        
+                        {/* Document Editor Button */}
+                        <button
+                            onClick={() => navigate('/document-editor')}
+                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+                            title="AI Document Editor"
+                        >
+                            <svg
+                                className="w-5 h-5 text-slate-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        
                         {/* Language Dropdown in Header */}
                         <div className="relative">
                             <button
@@ -1310,9 +1385,10 @@ const Chat = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                                    <circle cx="12" cy="12" r="10" />
-                                    <line x1="2" y1="12" x2="22" y2="12" />
+                                    <path d="M5 8l6 6 6-6" />
+                                    <path d="M4 21h16" />
+                                    <path d="M9 3h6" />
+                                    <path d="M12 3v18" />
                                 </svg>
                             </button>
                             
@@ -1354,9 +1430,7 @@ const Chat = () => {
                         <button
                             onClick={toggleHistory}
                             className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            title={
-                                isHistoryOpen ? 'Hide history' : 'Show history'
-                            }
+                            title={isHistoryOpen ? 'Hide history' : 'Show history'}
                         >
                             <svg
                                 className="w-5 h-5 text-slate-400"
@@ -1368,11 +1442,7 @@ const Chat = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     strokeWidth={2}
-                                    d={
-                                        isHistoryOpen
-                                            ? 'M19 9l-7 7-7-7'
-                                            : 'M19 9l-7 7-7-7'
-                                    }
+                                    d={isHistoryOpen ? 'M19 9l-7 7-7-7' : 'M19 9l-7 7-7-7'}
                                 />
                             </svg>
                         </button>
@@ -1381,12 +1451,12 @@ const Chat = () => {
 
                 {/* Messages Container - Updated padding and spacing */}
                 <div className="flex-1 overflow-y-auto bg-slate-900">
-                    <div className="max-w-3xl mx-auto py-4 space-y-3">
+                    <div className="max-w-3xl mx-auto py-0.5 space-y-0.5">
                         {messages.map((message, index) => (
                             <MessageBubble key={index} message={message} />
                         ))}
                         {isTyping && (
-                            <div className="flex items-start gap-2 px-2">
+                            <div className="flex items-start gap-0.5 px-0.5">
                                 <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
                                     <IconComponents.MessageCircle className="w-4 h-4 text-white" />
                                 </div>
@@ -1400,13 +1470,13 @@ const Chat = () => {
                 </div>
 
                 {/* Input Area - Adjusted padding bottom */}
-                <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-6 md:pb-0">
-                    <div className="max-w-2xl mx-auto p-4">
+                <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-3 md:pb-0">
+                    <div className="max-w-2xl mx-auto p-3">
                         <form
                             onSubmit={handleSubmit}
-                            className="relative space-y-2"
+                            className="relative space-y-1"
                         >
-                            <div className="relative mb-4">
+                            <div className="relative mb-2">
                                 <textarea
                                     ref={inputRef}
                                     value={message}
@@ -1416,7 +1486,7 @@ const Chat = () => {
                                             e.preventDefault();
                                             handleSubmit(e);
                                             // Reset height after sending
-                                            e.target.style.height = '44px';
+                                            e.target.style.height = '38px';
                                         }
                                     }}
                                     placeholder={
@@ -1426,7 +1496,7 @@ const Chat = () => {
                                               ? 'Search the web for legal information...'
                                               : 'Ask any legal question...'
                                     }
-                                    className={`w-full rounded-lg pl-3 pr-20 py-2 
+                                    className={`w-full rounded-lg pl-3 pr-20 py-1.5 
                             bg-slate-700/50 border text-white placeholder-slate-400 
                             text-sm resize-none overflow-hidden leading-normal 
                             transition-all duration-200
@@ -1437,11 +1507,11 @@ const Chat = () => {
                             }`}
                                     disabled={isTyping || isTempUser}
                                     rows="1"
-                                    style={{ height: '44px' }} // Default height
+                                    style={{ height: '38px' }} // Reduced default height
                                 />
 
                                 {/* Action buttons container with adjusted spacing */}
-                                <div className="absolute right-2 top-0 h-full flex items-center gap-1.5">
+                                <div className="absolute right-2 top-0 h-full flex items-center gap-1">
                                     <div className="relative">
                                         {/* Tools Menu Button */}
                                         <button
@@ -1449,7 +1519,7 @@ const Chat = () => {
                                             onClick={() =>
                                                 setIsToolsOpen(!isToolsOpen)
                                             }
-                                            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center justify-center
+                                            className={`p-1 rounded-lg transition-all duration-200 flex items-center justify-center
                                 ${isToolsOpen ? 'bg-slate-700/50 text-white' : 'text-slate-400 hover:text-white'}`}
                                             title="Show tools"
                                         >
@@ -1553,10 +1623,6 @@ const Chat = () => {
                                                             <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                                                         </svg>
                                                     </button>
-                                                    <LanguageSelector
-                                                        selectedLanguage={language}
-                                                        onLanguageChange={handleLanguageChange}
-                                                    />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowDocumentCreator(true)}
