@@ -1,20 +1,62 @@
+/* Import fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    /* Dark theme colors */
+    --color-bg-dark: #0f172a;
+    --color-bg-dark-secondary: #1e293b;
+    --color-text-dark: #f8fafc;
+    --color-text-dark-secondary: #94a3b8;
+    --color-border-dark: rgba(148, 163, 184, 0.1);
+    
+    /* Light theme colors */
+    --color-bg-light: #ffffff;
+    --color-bg-light-secondary: #f1f5f9;
+    --color-text-light: #0f172a;
+    --color-text-light-secondary: #475569;
+    --color-border-light: rgba(71, 85, 105, 0.1);
+}
+
 @layer base {
     body {
-        @apply text-gray-900 antialiased;
+        @apply antialiased;
+        font-family: 'Inter', sans-serif;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'DM Sans', sans-serif;
     }
 }
 
 @layer components {
     .input-primary {
-        @apply w-full rounded-lg border border-gray-200 p-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500;
+        @apply w-full rounded-lg border p-3 text-sm focus:ring-2 focus:ring-offset-1 transition-all duration-200;
     }
 
     .btn-primary {
-        @apply transform rounded-lg bg-blue-600 px-6 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+        @apply transform rounded-lg px-5 py-2.5 text-sm font-medium transition-all duration-200 focus:ring-2 focus:ring-offset-1;
+    }
+
+    /* Theme specific classes */
+    .theme-dark {
+        --bg-primary: var(--color-bg-dark);
+        --bg-secondary: var(--color-bg-dark-secondary);
+        --text-primary: var(--color-text-dark);
+        --text-secondary: var(--color-text-dark-secondary);
+        --border-color: var(--color-border-dark);
+    }
+
+    .theme-light {
+        --bg-primary: var(--color-bg-light);
+        --bg-secondary: var(--color-bg-light-secondary);
+        --text-primary: var(--color-text-light);
+        --text-secondary: var(--color-text-light-secondary);
+        --border-color: var(--color-border-light);
     }
 }
 
@@ -83,4 +125,32 @@
 /* Add a subtle glow effect for success state */
 .upload-success {
     filter: drop-shadow(0 0 0.5rem theme('colors.blue.500'));
+}
+
+/* Hide scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox scrollbar - hidden */
+.scrollbar-thin {
+  scrollbar-width: none;
+}
+
+/* Add these styles to customize scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: none;
+}
+
+/* Firefox scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-thin {
+  scrollbar-width: none;
 }

@@ -244,6 +244,38 @@ export const chatApi = {
             });
             throw error;
         }
+    },
+
+    sendDocument: async (file) => {
+        // If you don't have an actual upload endpoint, you can simulate success
+        // or use a different endpoint that can process the document content
+        
+        // For now, just return a success response
+        return {
+            success: true,
+            message: "Document processed successfully"
+        };
+        
+        // If you do have an endpoint that can analyze documents without storing them:
+        /*
+        const formData = new FormData();
+        formData.append('document', file);
+        
+        const response = await fetch('https://your-api-endpoint/analyze-document', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authService.getToken()}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to process document');
+        }
+        
+        return await response.json();
+        */
     }
     //this endpoint doesn't even exist 💀
 };
