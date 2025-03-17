@@ -912,11 +912,40 @@ const Chat = () => {
                             }
                         ]);
                         
-                        // Upload the document
-                        const response = await documentsApi.uploadDocument(file, file.name);
+                        // Instead of using documentsApi, use the chatApi to handle the document
+                        const response = await chatApi.sendDocument(file);
+                        
+                        // Create a document object from the file
+                        const document = {
+                            _id: new Date().getTime().toString(), // Generate a temporary ID
+                            name: file.name,
+                            type: file.type,
+                            size: file.size
+                        };
                         
                         // Handle successful upload
-                        handleUploadComplete(response);
+                        setUploadedDocuments((prev) => [...prev, document]);
+                        setActiveDocuments((prev) => {
+                            const newActiveDocuments = [...prev, document._id];
+                            return newActiveDocuments;
+                        });
+                        
+                        // Toggle document analysis mode
+                        setIsDocumentAnalysis(true);
+                        setIsWebMode(false);
+                        
+                        // Add system message about document upload
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                type: 'system',
+                                content: {
+                                    response: `Document "${document.name}" uploaded successfully. You can now ask questions about this document.`
+                                },
+                                documents: [document],
+                                timestamp: new Date()
+                            }
+                        ]);
                         
                         // Reset the file input
                         event.target.value = '';
