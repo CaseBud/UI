@@ -1,6 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { documentsApi } from '../utils/api';
 import Notification from './Notification';
+import { useTheme } from '../contexts/ThemeContext';
 
 const DocumentIcon = () => (
     <svg
@@ -70,6 +71,17 @@ const DocumentUploader = ({ onUploadComplete }) => {
     const [uploadProgress, setUploadProgress] = useState(0);
     const [notification, setNotification] = useState(null);
     const fileInputRef = useRef(null);
+    const { isDark, lightModeBaseColor } = useTheme();
+
+    // Automatically trigger file selection when component mounts
+    useEffect(() => {
+        // Small delay to ensure the component is fully rendered
+        const timer = setTimeout(() => {
+            fileInputRef.current?.click();
+        }, 100);
+        
+        return () => clearTimeout(timer);
+    }, []);
 
     const simulateProgress = (callback) => {
         let progress = 0;
@@ -160,7 +172,11 @@ const DocumentUploader = ({ onUploadComplete }) => {
             <div className="relative group">
                 <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2 rounded-md text-slate-400 hover:text-white transition-all duration-300 ease-in-out transform hover:scale-105"
+                    className={`p-2 rounded-md ${
+                        isDark 
+                            ? 'text-slate-400 hover:text-white' 
+                            : `text-gray-600 hover:text-gray-800`
+                    } transition-all duration-300 ease-in-out transform hover:scale-105`}
                     title="Click to upload a document"
                 >
                     {isUploading ? (
@@ -178,7 +194,11 @@ const DocumentUploader = ({ onUploadComplete }) => {
                     accept=".pdf,.doc,.docx,.txt"
                 />
 
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-xs text-slate-200 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 ${
+                    isDark 
+                        ? 'bg-slate-800 text-slate-200' 
+                        : `bg-[${lightModeBaseColor}] text-gray-800`
+                } text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap`}>
                     Upload document
                 </div>
             </div>

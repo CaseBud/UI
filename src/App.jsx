@@ -9,6 +9,7 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import DocumentEditor from './components/DocumentEditor';
 import DocumentList from './components/DocumentList';
+import './styles/formattedText.css';
  
 
 const App = () => {

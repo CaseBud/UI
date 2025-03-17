@@ -77,7 +77,7 @@ const ChatHistory = ({
         <div
             className={`
       fixed inset-0 md:static md:inset-auto
-      bg-slate-800/95 backdrop-blur-sm z-50
+      bg-slate-800/95 z-50
       transform transition-all duration-300 ease-in-out
       ${isOpen ? 'translate-x-0' : 'translate-x-full'}
     `}

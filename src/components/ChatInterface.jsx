@@ -99,27 +99,24 @@ const ChatInterface = () => {
                         </div>
                     ) : (
                         //!Default prompts
-                        <div className="middle h-[80vh] flex items-center flex-col justify-center px-4">
-                            <h1 className="text-4xl">
+                        <div className="middle h-[80vh] flex items-center flex-col justify-center px-6">
+                            <h1 className="text-3xl font-semibold mb-8">
                                 CaseBud Legal Assistant
                             </h1>
-                            <div className="boxes mt-[30px] flex items-center gap-2 flex-wrap justify-center">
-                                <div className="card rounded-lg cursor-pointer transition-all hover:bg-[#201f1f] px-[20px] relative min-h-[20vh] bg-[#181818] p-[10px]">
-                                    <p className="text-[18px]">
-                                        What are my rights <br />
-                                        in a criminal case?
+                            <div className="boxes grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                                <div className="card rounded-lg cursor-pointer transition-all hover:bg-[#201f1f] px-4 py-3 relative bg-[#181818]">
+                                    <p className="text-base mb-2">
+                                        What are my rights in a criminal case?
                                     </p>
-                                    <i className="absolute right-3 bottom-3 text-[18px]">
+                                    <i className="absolute right-3 bottom-3 text-base opacity-50">
                                         <GiHandcuffs />
                                     </i>
                                 </div>
-                                <div className="card rounded-lg cursor-pointer transition-all hover:bg-[#201f1f] px-[20px] relative min-h-[20vh] bg-[#181818] p-[10px]">
-                                    <p className="text-[18px]">
-                                        Help with tenant <br />
-                                        rights and housing <br />
-                                        laws
+                                <div className="card rounded-lg cursor-pointer transition-all hover:bg-[#201f1f] px-4 py-3 relative bg-[#181818]">
+                                    <p className="text-base mb-2">
+                                        Help with tenant rights and housing laws
                                     </p>
-                                    <i className="absolute right-3 bottom-3 text-[18px]">
+                                    <i className="absolute right-3 bottom-3 text-base opacity-50">
                                         <GiHouse />
                                     </i>
                                 </div>
