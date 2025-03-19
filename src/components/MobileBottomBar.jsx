@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import TranslatedText from './TranslatedText';
+import { translate } from '../utils/translations';
 
 const MobileBottomBar = ({
     handleNewChat,
@@ -7,18 +10,30 @@ const MobileBottomBar = ({
     setIsWebMode,
     setDocumentAnalysisId,
     setIsDocumentAnalysis,
-    setIsLanguageDropdownOpen,
-    isLanguageDropdownOpen,
     setIsHistoryOpen,
     isHistoryOpen,
-    language,
-    handleLanguageChange,
     IconComponents,
     handleDocumentUploadClick,
     isDetailedMode,
     handleDetailedModeToggle
 }) => {
     const { isDark } = useTheme();
+    const { currentLanguage, changeLanguage, languages } = useLanguage();
+    const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+
+    // Handle language change using our context
+    const handleLanguageChange = (langCode) => {
+        changeLanguage(langCode);
+    };
+
+    // Add translations for mobile buttons
+    const translations = {
+        newChat: translate('mobile.newChat', currentLanguage),
+        web: translate('chat.webSearch', currentLanguage),
+        upload: translate('document.upload', currentLanguage),
+        language: translate('settings.language', currentLanguage),
+        detailed: translate('chat.detailedMode', currentLanguage)
+    };
 
     return (
         <>
@@ -29,12 +44,12 @@ const MobileBottomBar = ({
                         className={`p-2 rounded-full flex flex-col items-center justify-center text-xs ${
                             isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'
                         }`}
-                        aria-label="New chat"
+                        aria-label={translations.newChat}
                     >
                         <svg className="w-5 h-5 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M12 4v16m8-8H4" />
                         </svg>
-                        <span>New Chat</span>
+                        <span>{translations.newChat}</span>
                     </button>
 
                     <button
@@ -52,7 +67,7 @@ const MobileBottomBar = ({
                                     ? 'text-slate-400 hover:text-white' 
                                     : 'text-gray-600 hover:text-gray-800'
                         }`}
-                        aria-label="Toggle web search"
+                        aria-label={translations.web}
                     >
                         <div className="relative">
                             <IconComponents.Globe className="w-5 h-5 mb-1" />
@@ -60,7 +75,7 @@ const MobileBottomBar = ({
                                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
                             )}
                         </div>
-                        <span>Web</span>
+                        <span>{translations.web}</span>
                     </button>
 
                     {/* Document Upload Button */}
@@ -69,7 +84,7 @@ const MobileBottomBar = ({
                         className={`p-2 rounded-full flex flex-col items-center justify-center text-xs ${
                             isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'
                         }`}
-                        aria-label="Upload document"
+                        aria-label={translations.upload}
                     >
                         <svg className="w-5 h-5 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -77,7 +92,7 @@ const MobileBottomBar = ({
                             <line x1="12" y1="18" x2="12" y2="12" />
                             <line x1="9" y1="15" x2="15" y2="15" />
                         </svg>
-                        <span>Upload</span>
+                        <span>{translations.upload}</span>
                     </button>
 
                     <button
@@ -85,7 +100,7 @@ const MobileBottomBar = ({
                         className={`p-2 rounded-full flex flex-col items-center justify-center text-xs ${
                             isLanguageDropdownOpen ? 'text-blue-400' : isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'
                         }`}
-                        aria-label="Language settings"
+                        aria-label={translations.language}
                     >
                         <div className="relative">
                             <svg className="w-5 h-5 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -96,11 +111,11 @@ const MobileBottomBar = ({
                                 <path d="M13.5 12.5h3.5" />
                                 <path d="M16 10l2 2.5-2 2.5" />
                             </svg>
-                            {language !== 'en-US' && (
+                            {currentLanguage !== 'en-US' && (
                                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
                             )}
                         </div>
-                        <span>Language</span>
+                        <span>{translations.language}</span>
                     </button>
 
                     {/* Reasoning Mode Toggle (replacing History) */}
@@ -109,7 +124,7 @@ const MobileBottomBar = ({
                         className={`p-2 rounded-full flex flex-col items-center justify-center text-xs ${
                             isDetailedMode ? 'text-blue-400' : isDark ? 'text-slate-400 hover:text-white' : 'text-gray-600 hover:text-gray-800'
                         }`}
-                        aria-label="Toggle detailed mode"
+                        aria-label={translations.detailed}
                     >
                         <div className="relative">
                             <svg className="w-5 h-5 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -120,7 +135,7 @@ const MobileBottomBar = ({
                                 <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
                             )}
                         </div>
-                        <span>Detailed</span>
+                        <span>{translations.detailed}</span>
                     </button>
                 </div>
             </div>
@@ -130,31 +145,22 @@ const MobileBottomBar = ({
                 <div className={`absolute bottom-16 left-0 right-0 p-2 border-t ${
                     isDark ? 'bg-slate-800 border-slate-700/50' : 'bg-white border-gray-200/50'
                 }`}>
-                    <div className="grid grid-cols-2 gap-2">
-                        {[
-                            { code: 'en-US', name: 'English' },
-                            { code: 'es-ES', name: 'Spanish' },
-                            { code: 'fr-FR', name: 'French' },
-                            { code: 'de-DE', name: 'German' },
-                            { code: 'zh-CN', name: 'Chinese' }
-                        ].map((lang) => (
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                        {languages.map((lang) => (
                             <button
                                 key={lang.code}
                                 onClick={() => {
                                     handleLanguageChange(lang.code);
                                     setIsLanguageDropdownOpen(false);
                                 }}
-                                className={`p-2 text-sm rounded-lg ${
-                                    language === lang.code
-                                        ? isDark 
-                                            ? 'bg-slate-700 text-white' 
-                                            : 'bg-blue-100 text-gray-800'
-                                        : isDark 
-                                            ? 'text-slate-300 hover:bg-slate-700/50' 
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                className={`p-2 text-sm rounded-lg flex items-center space-x-2 ${
+                                    currentLanguage === lang.code
+                                        ? 'bg-slate-700 text-white'
+                                        : 'text-slate-200 hover:bg-slate-700/50'
                                 }`}
                             >
-                                {lang.name}
+                                <span className="text-lg">{lang.flag}</span>
+                                <span>{lang.name}</span>
                             </button>
                         ))}
                     </div>

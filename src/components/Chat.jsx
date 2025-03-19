@@ -19,6 +19,8 @@ import MessageBubble from './MessageBubble';
 import ChatInput from './ChatInput';
 import MobileInput from './MobileInput';
 import MobileBottomBar from './MobileBottomBar';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -195,7 +197,9 @@ const IconComponents = {
 
 const Chat = () => {
     const user = authService.getCurrentUser();
-    const defaultGreeting = `Hello ${user?.fullName || user?.name || 'there'}! How can I help you today?`;
+    const { currentLanguage } = useLanguage();
+    const userName = user?.fullName || user?.name || 'there';
+    const defaultGreeting = translate('default.greeting', currentLanguage).replace('{name}', userName);
     const location = useLocation();
     const navigate = useNavigate();
     const isTempUser = location.state?.tempUser || false;
@@ -241,12 +245,10 @@ const Chat = () => {
     
     // New state variables for the new features
     const [isDetailedMode, setIsDetailedMode] = useState(false);
-    const [language, setLanguage] = useState('en-US');
     const [showDocumentCreator, setShowDocumentCreator] = useState(false);
     const [documents, setDocuments] = useState([]);
     const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
     const [currentSpeakingMessage, setCurrentSpeakingMessage] = useState(null);
-    const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
     const { isDark, lightModeBaseColor } = useTheme();
 
     // Create a ref for the file input
@@ -269,24 +271,13 @@ const Chat = () => {
                     setIsHistoryOpen(false);
                 }
             }
-            
-            // Close language dropdown when clicking outside
-            const languageDropdown = document.getElementById('language-dropdown-button');
-            if (
-                isLanguageDropdownOpen && 
-                languageDropdown && 
-                !languageDropdown.contains(event.target) &&
-                !event.target.closest('.language-dropdown-menu')
-            ) {
-                setIsLanguageDropdownOpen(false);
-            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isLanguageDropdownOpen]);
+    }, []);
 
     useEffect(() => {
         if (chatContainerRef.current) {
@@ -475,7 +466,7 @@ const Chat = () => {
             {
                 type: 'system',
                 content: {
-                    response: `Document "${document.name}" uploaded successfully. You can now ask questions about this document.`
+                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
                 },
                 documents: [document],
                 timestamp: new Date()
@@ -495,7 +486,8 @@ const Chat = () => {
             const response = await chatApi.sendDocumentAnalysis(
                 query,
                 documentIds,
-                documentAnalysisId
+                documentAnalysisId,
+                currentLanguage
             );
             await showResponseGradually(
                 response.response || 'No response received'
@@ -518,10 +510,6 @@ const Chat = () => {
     // Add handler functions for the new features
     const handleDetailedModeToggle = (isDetailed) => {
         setIsDetailedMode(isDetailed);
-    };
-    
-    const handleLanguageChange = (lang) => {
-        setLanguage(lang);
     };
     
     const handleDocumentCreate = (newDocument) => {
@@ -578,7 +566,8 @@ const Chat = () => {
                     response = await chatApi.sendDocumentAnalysis(
                         content.trim(),
                         activeDocuments.length > 0 ? activeDocuments : null,
-                        documentAnalysisId
+                        documentAnalysisId,
+                        currentLanguage
                     );
 
                     if (!response) {
@@ -633,8 +622,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response:
-                                        'Switched to general conversation mode'
+                                    response: translate('default.generalChat', currentLanguage)
                                 },
                                 documents: [],
                                 timestamp: new Date()
@@ -647,8 +635,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response:
-                                        'Switched to web browsing mode (beta)'
+                                    response: translate('default.webSearchMode', currentLanguage)
                                 },
                                 documents: [],
                                 timestamp: new Date()
@@ -661,7 +648,7 @@ const Chat = () => {
                 response = await chatApi.sendMessage(content.trim(), {
                     conversationId: currentconversationId,
                     webSearch: isWebMode,
-                    language: language,
+                    language: currentLanguage,
                     detailedMode: isDetailedMode
                 });
                 setCurrentconversationId(response.conversationId);
@@ -671,8 +658,7 @@ const Chat = () => {
                         {
                             type: 'system',
                             content: {
-                                response:
-                                    'Searching the web for relevant sources...'
+                                response: translate('default.searchingWeb', currentLanguage)
                             },
                             timestamp: new Date()
                         }
@@ -755,7 +741,7 @@ const Chat = () => {
                 {
                     type: 'assistant',
                     content: {
-                        response: defaultGreeting,
+                        response: translate('default.greeting', currentLanguage).replace('{name}', userName),
                         query: null
                     },
                     timestamp: new Date()
@@ -802,7 +788,7 @@ const Chat = () => {
                 {
                     type: 'assistant',
                     content: {
-                        response: defaultGreeting,
+                        response: translate('default.greeting', currentLanguage).replace('{name}', userName),
                         query: null
                     },
                     timestamp: new Date()
@@ -824,7 +810,9 @@ const Chat = () => {
             ...prev,
             {
                 type: 'system',
-                content: 'Switched to general conversation mode',
+                content: {
+                    response: translate('default.generalChat', currentLanguage)
+                },
                 timestamp: new Date()
             }
         ]);
@@ -864,11 +852,11 @@ const Chat = () => {
             }
         } catch (error) {
             console.error('Failed to load conversation:', error);
-            // Show error message to user
+            // Show error message to user using the translation
             setMessages([{
                 type: 'error',
                 content: {
-                    response: 'Failed to load conversation. Please try again.'
+                    response: translate('default.loadError', currentLanguage)
                 },
                 timestamp: new Date()
             }]);
@@ -906,7 +894,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response: `Uploading document "${file.name}"...`
+                                    response: translate('default.documentUploading', currentLanguage).replace('{name}', file.name)
                                 },
                                 timestamp: new Date()
                             }
@@ -940,7 +928,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response: `Document "${document.name}" uploaded successfully. You can now ask questions about this document.`
+                                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
                                 },
                                 documents: [document],
                                 timestamp: new Date()
@@ -956,7 +944,7 @@ const Chat = () => {
                             {
                                 type: 'error',
                                 content: {
-                                    response: `Failed to upload document: ${error.message || 'Unknown error'}`
+                                    response: translate('default.uploadError', currentLanguage).replace('{error}', error.message || 'Unknown error')
                                 },
                                 timestamp: new Date()
                             }
@@ -977,8 +965,6 @@ const Chat = () => {
                 {/* Chat header */}
                 <ChatHeader 
                     onDocumentUploadClick={handleDocumentUploadClick}
-                    setIsLanguageDropdownOpen={setIsLanguageDropdownOpen}
-                    isLanguageDropdownOpen={isLanguageDropdownOpen}
                     setIsHistoryOpen={setIsHistoryOpen}
                     isHistoryOpen={isHistoryOpen}
                 />
@@ -1096,12 +1082,10 @@ const Chat = () => {
                     setIsWebMode={setIsWebMode}
                     setDocumentAnalysisId={setDocumentAnalysisId}
                     setIsDocumentAnalysis={setIsDocumentAnalysis}
-                    setIsLanguageDropdownOpen={setIsLanguageDropdownOpen}
-                    isLanguageDropdownOpen={isLanguageDropdownOpen}
                     setIsHistoryOpen={setIsHistoryOpen}
                     isHistoryOpen={isHistoryOpen}
-                    language={language}
-                    handleLanguageChange={handleLanguageChange}
+                    language={currentLanguage}
+                    handleLanguageChange={() => {}}
                     IconComponents={IconComponents}
                     handleDocumentUploadClick={handleDocumentUploadClick}
                     isDetailedMode={isDetailedMode}
