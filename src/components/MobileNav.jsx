@@ -1,9 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { useTheme } from '../contexts/ThemeContext';
+import ThemeToggle from './ThemeToggle';
 
 const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
     const navigate = useNavigate();
+    const { isDark } = useTheme();
 
     const handleLogout = () => {
         authService.logout();
@@ -16,32 +19,36 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                   ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         >
             <div
-                className={`w-[280px] h-full bg-slate-800 transform transition-transform duration-300 
+                className={`w-[280px] h-full ${isDark ? 'bg-legal-dark-card' : 'bg-white'} transform transition-transform duration-300 
                     ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
             >
                 <div className="p-4 border-b border-slate-700/50">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                             <div
-                                className="h-8 w-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg 
+                                className="h-8 w-8 bg-legal-primary rounded-lg 
                             flex items-center justify-center"
                             >
-                                <img
-                                    src="https://res.cloudinary.com/dintwofob/image/upload/v1739117262/assets/sgep1zueqfedt8xkham4.jpg"
-                                    alt="Icon"
+                                <svg
                                     className="h-5 w-5 text-white"
-                                />
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                                </svg>
                             </div>
-                            <h2 className="text-lg font-semibold text-white">
+                            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                                 CaseBud
                             </h2>
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
+                            className={`p-2 ${isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-100'} rounded-lg transition-colors`}
                         >
                             <svg
-                                className="w-5 h-5 text-slate-400"
+                                className={`w-5 h-5 ${isDark ? 'text-slate-400' : 'text-gray-500'}`}
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
@@ -58,7 +65,7 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                 </div>
 
                 <div className="p-4">
-                    <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-4">
+                    <h3 className={`text-sm font-medium ${isDark ? 'text-slate-400' : 'text-gray-500'} uppercase tracking-wider mb-4`}>
                         Quick Prompts
                     </h3>
                     <div className="space-y-2">
@@ -85,11 +92,14 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                                     onSelectPrompt(item.prompt);
                                     onClose();
                                 }}
-                                className="w-full p-3 text-left rounded-lg bg-slate-700/30 hover:bg-slate-700/50 
-                          transition-colors flex items-center space-x-3"
+                                className={`w-full p-3 text-left rounded-lg ${
+                                    isDark 
+                                        ? 'bg-slate-700/30 hover:bg-slate-700/50' 
+                                        : 'bg-gray-50 hover:bg-gray-100'
+                                } transition-colors flex items-center space-x-3`}
                             >
                                 <span className="text-xl">{item.icon}</span>
-                                <span className="text-sm text-slate-200">
+                                <span className={`text-sm ${isDark ? 'text-slate-200' : 'text-gray-700'}`}>
                                     {item.title}
                                 </span>
                             </button>
@@ -97,12 +107,51 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                     </div>
                 </div>
 
+                <div className="px-4 pt-2 pb-3 space-y-1">
+                    <a
+                        href="/chat"
+                        className={`block px-3 py-2 rounded-md text-base font-medium ${
+                            isDark 
+                                ? 'text-white bg-slate-700/50 hover:bg-slate-700' 
+                                : 'text-gray-900 bg-gray-100 hover:bg-gray-200'
+                        }`}
+                    >
+                        Chat
+                    </a>
+                    <a
+                        href="/document-editor"
+                        className={`block px-3 py-2 rounded-md text-base font-medium ${
+                            isDark 
+                                ? 'text-slate-300 hover:bg-slate-700 hover:text-white' 
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        }`}
+                    >
+                        Document Editor
+                    </a>
+                </div>
+
+                <div className={`absolute bottom-[140px] left-0 right-0 p-4 border-t ${
+                    isDark ? 'border-slate-700/50' : 'border-gray-200'
+                }`}>
+                    <div className="flex items-center justify-between">
+                        <span className={`text-sm ${isDark ? 'text-slate-400' : 'text-gray-500'}`}>
+                            Theme
+                        </span>
+                        <ThemeToggle />
+                    </div>
+                </div>
+
                 {user && (
-                    <div className="absolute bottom-[72px] left-0 right-0 p-4 border-t border-slate-700/50">
+                    <div className={`absolute bottom-[72px] left-0 right-0 p-4 border-t ${
+                        isDark ? 'border-slate-700/50' : 'border-gray-200'
+                    }`}>
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center justify-between px-3 py-2 rounded-lg 
-                       hover:bg-slate-700/50 text-red-400 hover:text-red-300 transition-colors"
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg 
+                            ${isDark 
+                                ? 'hover:bg-slate-700/50 text-red-400 hover:text-red-300' 
+                                : 'hover:bg-gray-100 text-red-500 hover:text-red-600'
+                            } transition-colors`}
                         >
                             <span>Logout</span>
                             <svg
@@ -123,18 +172,28 @@ const MobileNav = ({ user, onSelectPrompt, isTempUser, isOpen, onClose }) => {
                 )}
 
                 {user && (
-                    <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50">
+                    <div className={`absolute bottom-0 left-0 right-0 p-4 border-t ${
+                        isDark ? 'border-slate-700/50' : 'border-gray-200'
+                    }`}>
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center">
-                                <span className="text-sm font-medium text-white">
+                            <div className={`w-8 h-8 rounded-full ${
+                                isDark ? 'bg-slate-700' : 'bg-gray-200'
+                            } flex items-center justify-center`}>
+                                <span className={`text-sm font-medium ${
+                                    isDark ? 'text-white' : 'text-gray-700'
+                                }`}>
                                     {user.fullName?.[0]?.toUpperCase() || 'U'}
                                 </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className={`text-sm font-medium ${
+                                    isDark ? 'text-white' : 'text-gray-900'
+                                } truncate`}>
                                     {user.fullName || 'User'}
                                 </p>
-                                <p className="text-xs text-slate-400 truncate">
+                                <p className={`text-xs ${
+                                    isDark ? 'text-slate-400' : 'text-gray-500'
+                                } truncate`}>
                                     {user.email}
                                 </p>
                             </div>

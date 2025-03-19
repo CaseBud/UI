@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
 const ChatHistory = ({
     conversations = [], // Add default empty array
@@ -7,10 +10,13 @@ const ChatHistory = ({
     onEditTitle,
     onNewChat,
     isOpen,
+    currentconversationId,
     onClose
 }) => {
+    const { isDark } = useTheme();
+    const { currentLanguage } = useLanguage();
     const [searchTerm, setSearchTerm] = useState('');
-    const [editingId, setEditingId] = useState(null);
+    const [editingChatId, setEditingChatId] = useState(null);
     const [newTitle, setNewTitle] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Add loading state
 
@@ -28,19 +34,30 @@ const ChatHistory = ({
         );
     }, [sortedConversations, searchTerm]);
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-        });
+    const handleStartEdit = (chatId, currentTitle) => {
+        setEditingChatId(chatId);
+        setNewTitle(currentTitle);
     };
 
-    const handleEditSubmit = (conversationId) => {
-        onEditTitle(conversationId, newTitle);
-        setEditingId(null);
-        setNewTitle('');
+    const handleSaveEdit = (chatId) => {
+        if (newTitle.trim()) {
+            onEditTitle(chatId, newTitle.trim());
+        }
+        setEditingChatId(null);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingChatId(null);
+    };
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return new Intl.DateTimeFormat(currentLanguage, { 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
     };
 
     const EmptyState = () => (
@@ -59,10 +76,10 @@ const ChatHistory = ({
                 />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-slate-300">
-                No conversations yet
+                {translate('chat.noHistory', currentLanguage) || 'No conversations yet'}
             </h3>
             <p className="mt-1 text-sm text-slate-400">
-                Start a new chat to begin your legal inquiry.
+                {translate('chat.startNew', currentLanguage) || 'Start a new chat to begin your legal inquiry.'}
             </p>
         </div>
     );
@@ -77,7 +94,7 @@ const ChatHistory = ({
         <div
             className={`
       fixed inset-0 md:static md:inset-auto
-      bg-slate-800/95 backdrop-blur-sm z-50
+      bg-slate-800/95 z-50
       transform transition-all duration-300 ease-in-out
       ${isOpen ? 'translate-x-0' : 'translate-x-full'}
     `}
@@ -100,13 +117,13 @@ const ChatHistory = ({
                             />
                         </svg>
                         <h2 className="text-sm font-medium text-slate-300">
-                            Chat History
+                            {translate('chat.history', currentLanguage)}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
                         className="p-1.5 hover:bg-slate-700/50 rounded-lg transition-colors group"
-                        aria-label="Close history"
+                        aria-label={translate('common.close', currentLanguage)}
                     >
                         <svg
                             className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors"
@@ -149,7 +166,7 @@ const ChatHistory = ({
                                     />
                                 </svg>
                                 <span className="text-sm text-slate-300">
-                                    New Chat
+                                    {translate('mobile.newChat', currentLanguage)}
                                 </span>
                             </button>
 
@@ -157,7 +174,7 @@ const ChatHistory = ({
                             <div className="relative mb-2">
                                 <input
                                     type="text"
-                                    placeholder="Search conversations..."
+                                    placeholder={translate('chat.search', currentLanguage) || "Search conversations..."}
                                     value={searchTerm}
                                     onChange={(e) =>
                                         setSearchTerm(e.target.value)
@@ -190,7 +207,7 @@ const ChatHistory = ({
                                 ) : !filteredConversations.length ? (
                                     <div className="text-center py-8 px-4">
                                         <p className="text-sm text-slate-400">
-                                            No conversations found
+                                            {translate('chat.noConversationsFound', currentLanguage) || 'No conversations found'}
                                         </p>
                                     </div>
                                 ) : (
@@ -208,18 +225,9 @@ const ChatHistory = ({
                                           : 'hover:bg-slate-700/50 text-slate-300'
                                   }`}
                                             >
-                                                {editingId ===
+                                                {editingChatId ===
                                                 (chat._id || chat.id) ? (
-                                                    <form
-                                                        onSubmit={(e) => {
-                                                            e.preventDefault();
-                                                            handleEditSubmit(
-                                                                chat._id ||
-                                                                    chat.id
-                                                            );
-                                                        }}
-                                                        className="flex items-center space-x-2"
-                                                    >
+                                                    <div className="flex items-center p-2 rounded-lg">
                                                         <input
                                                             type="text"
                                                             value={newTitle}
@@ -229,13 +237,16 @@ const ChatHistory = ({
                                                                         .value
                                                                 )
                                                             }
-                                                            className="flex-1 px-2 py-1 bg-slate-900 rounded border border-slate-600
-                                       text-sm font-medium"
+                                                            className="flex-1 bg-slate-700 text-white border border-slate-600 rounded p-1 text-sm mr-2"
                                                             autoFocus
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') handleSaveEdit(chat._id || chat.id);
+                                                                if (e.key === 'Escape') handleCancelEdit();
+                                                            }}
                                                         />
                                                         <button
-                                                            type="submit"
-                                                            className="p-1 text-blue-400 hover:text-blue-300"
+                                                            onClick={() => handleSaveEdit(chat._id || chat.id)}
+                                                            className="p-1 text-green-400 hover:text-green-300"
                                                         >
                                                             <svg
                                                                 className="w-4 h-4"
@@ -253,7 +264,27 @@ const ChatHistory = ({
                                                                 />
                                                             </svg>
                                                         </button>
-                                                    </form>
+                                                        <button
+                                                            onClick={handleCancelEdit}
+                                                            className="p-1 text-red-400 hover:text-red-300"
+                                                        >
+                                                            <svg
+                                                                className="w-4 h-4"
+                                                                viewBox="0 0 24 24"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                        2
+                                                                    }
+                                                                    d="M6 18L18 6M6 6l12 12"
+                                                                />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <div className="flex items-center justify-between">
                                                         <div
@@ -268,6 +299,9 @@ const ChatHistory = ({
                                                             <h3 className="font-medium text-sm leading-5 truncate">
                                                                 {chat.title}
                                                             </h3>
+                                                            <div className="text-xs text-slate-400">
+                                                                {formatDate(chat.updated_at || chat.created_at)}
+                                                            </div>
                                                         </div>
                                                         <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <button
@@ -275,15 +309,14 @@ const ChatHistory = ({
                                                                     e
                                                                 ) => {
                                                                     e.stopPropagation();
-                                                                    setEditingId(
+                                                                    handleStartEdit(
                                                                         chat._id ||
-                                                                            chat.id
-                                                                    );
-                                                                    setNewTitle(
+                                                                            chat.id,
                                                                         chat.title
                                                                     );
                                                                 }}
                                                                 className="p-1 rounded hover:bg-slate-600/50 transition-colors"
+                                                                aria-label={translate('common.edit', currentLanguage) || "Edit"}
                                                             >
                                                                 <svg
                                                                     className="w-3.5 h-3.5 text-slate-400 hover:text-white"
@@ -297,7 +330,15 @@ const ChatHistory = ({
                                                                         strokeWidth={
                                                                             2
                                                                         }
-                                                                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                                        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"
+                                                                    />
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                        d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
                                                                     />
                                                                 </svg>
                                                             </button>
@@ -306,12 +347,15 @@ const ChatHistory = ({
                                                                     e
                                                                 ) => {
                                                                     e.stopPropagation();
-                                                                    onDeleteChat(
-                                                                        chat._id ||
-                                                                            chat.id
-                                                                    );
+                                                                    if (window.confirm(translate('chat.confirmDelete', currentLanguage) || "Are you sure you want to delete this conversation?")) {
+                                                                        onDeleteChat(
+                                                                            chat._id ||
+                                                                                chat.id
+                                                                        );
+                                                                    }
                                                                 }}
                                                                 className="p-1 rounded hover:bg-slate-600/50 transition-colors"
+                                                                aria-label={translate('common.delete', currentLanguage) || "Delete"}
                                                             >
                                                                 <svg
                                                                     className="w-3.5 h-3.5 text-red-400 hover:text-red-300"
@@ -325,7 +369,7 @@ const ChatHistory = ({
                                                                         strokeWidth={
                                                                             2
                                                                         }
-                                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                                        d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
                                                                     />
                                                                 </svg>
                                                             </button>

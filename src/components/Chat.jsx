@@ -3,13 +3,24 @@ import { chatApi } from '../utils/api';
 import { authService } from '../services/authService';
 import Sidebar from './Sidebar';
 import ChatHistory from './ChatHistory';
-import TypingAnimation from './TypingAnimation'; // Ensure this import is correct
+import TypingAnimation from './TypingAnimation';
 import DocumentUploader from './DocumentUploader';
 import DocumentPreview from './DocumentPreview';
 import VoiceChat from './VoiceChat';
+import VoiceToVoice from './VoiceToVoice';
+import TextToSpeech from './TextToSpeech';
+import ReasoningModeToggle from './ReasoningModeToggle';
+import LanguageSelector from './LanguageSelector';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MobileNav from './MobileNav';
-import MobileBottomBar from './MobileBottomBar'; // Ensure this import is correct
+import { useTheme } from '../contexts/ThemeContext';
+import ChatHeader from './ChatHeader';
+import MessageBubble from './MessageBubble';
+import ChatInput from './ChatInput';
+import MobileInput from './MobileInput';
+import MobileBottomBar from './MobileBottomBar';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -159,7 +170,7 @@ const IconComponents = {
     ),
     Wikipedia: (props) => (
         <svg {...props} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-1.023.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z" />
+            <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-1.023.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.174-.346-.277-.857-.277l-.423-.015c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z" />
         </svg>
     ),
     Google: (props) => (
@@ -186,13 +197,25 @@ const IconComponents = {
 
 const Chat = () => {
     const user = authService.getCurrentUser();
-    // Create greeting with user's name - update this line
-    const defaultGreeting = `Hello ${user?.fullName || user?.name || 'there'}! How can I help you today?`;
+    const { currentLanguage } = useLanguage();
+    const userName = user?.fullName || user?.name || 'there';
+    const defaultGreeting = translate('default.greeting', currentLanguage).replace('{name}', userName);
     const location = useLocation();
     const navigate = useNavigate();
     const isTempUser = location.state?.tempUser || false;
 
+    // Add inputRef definition
+    const inputRef = useRef(null);
     const [message, setMessage] = useState('');
+    
+    // Add handleMessageChange function
+    const handleMessageChange = (e) => {
+        setMessage(e.target.value);
+        // Auto-grow textarea
+        e.target.style.height = '36px';
+        e.target.style.height = `${e.target.scrollHeight}px`;
+    };
+
     const [messages, setMessages] = useState([
         {
             type: 'assistant',
@@ -205,7 +228,6 @@ const Chat = () => {
     ]);
     const [isTyping, setIsTyping] = useState(false);
     const chatContainerRef = useRef(null);
-    const inputRef = useRef(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [conversations, setConversations] = useState([]);
     const [currentconversationId, setCurrentconversationId] = useState(null);
@@ -220,6 +242,17 @@ const Chat = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isToolsOpen, setIsToolsOpen] = useState(false);
     const historyRef = useRef(null);
+    
+    // New state variables for the new features
+    const [isDetailedMode, setIsDetailedMode] = useState(false);
+    const [showDocumentCreator, setShowDocumentCreator] = useState(false);
+    const [documents, setDocuments] = useState([]);
+    const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
+    const [currentSpeakingMessage, setCurrentSpeakingMessage] = useState(null);
+    const { isDark, lightModeBaseColor } = useTheme();
+
+    // Create a ref for the file input
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         if (!isIncognito && isHistoryOpen) {
@@ -422,34 +455,26 @@ const Chat = () => {
             const newActiveDocuments = [...prev, document._id];
             return newActiveDocuments;
         });
-        if (!isDocumentAnalysis) {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    type: 'system',
-                    content: {
-                        response: 'Switched to document analysis chat'
-                    },
-                    documents: [],
-                    timestamp: new Date()
-                }
-            ]);
-        }
-        setIsWebMode(false);
+        
+        // Toggle document analysis mode
         setIsDocumentAnalysis(true);
-
+        setIsWebMode(false);
+        
+        // Add system message about document upload
         setMessages((prev) => [
             ...prev,
             {
                 type: 'system',
                 content: {
-                    response:
-                        'Document uploaded and ready for analysis. You can now ask questions about this document.'
+                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
                 },
                 documents: [document],
                 timestamp: new Date()
             }
         ]);
+        
+        // Close the document uploader modal
+        setShowDocumentCreator(false);
     };
 
     // Ensure document analysis chat sets conversationId to null when starting a new document chat
@@ -461,7 +486,8 @@ const Chat = () => {
             const response = await chatApi.sendDocumentAnalysis(
                 query,
                 documentIds,
-                documentAnalysisId
+                documentAnalysisId,
+                currentLanguage
             );
             await showResponseGradually(
                 response.response || 'No response received'
@@ -481,6 +507,39 @@ const Chat = () => {
         }
     };
 
+    // Add handler functions for the new features
+    const handleDetailedModeToggle = (isDetailed) => {
+        setIsDetailedMode(isDetailed);
+    };
+    
+    const handleDocumentCreate = (newDocument) => {
+        setDocuments([...documents, newDocument]);
+        setShowDocumentCreator(false);
+    };
+    
+    const handleTextToSpeechToggle = () => {
+        setIsTextToSpeechEnabled(!isTextToSpeechEnabled);
+        
+        // Cancel any ongoing speech when toggling off
+        if (isTextToSpeechEnabled) {
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(null);
+        }
+    };
+    
+    const handleSpeakMessage = (messageContent) => {
+        if (currentSpeakingMessage === messageContent) {
+            // If already speaking this message, stop it
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(null);
+        } else {
+            // Stop any current speech and speak the new message
+            window.speechSynthesis.cancel();
+            setCurrentSpeakingMessage(messageContent);
+        }
+    };
+
+    // Modify the sendMessage function to include the new features
     const sendMessage = async (content) => {
         if (!content?.trim() || isTyping) return;
 
@@ -507,7 +566,8 @@ const Chat = () => {
                     response = await chatApi.sendDocumentAnalysis(
                         content.trim(),
                         activeDocuments.length > 0 ? activeDocuments : null,
-                        documentAnalysisId
+                        documentAnalysisId,
+                        currentLanguage
                     );
 
                     if (!response) {
@@ -562,8 +622,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response:
-                                        'Switched to general conversation mode'
+                                    response: translate('default.generalChat', currentLanguage)
                                 },
                                 documents: [],
                                 timestamp: new Date()
@@ -576,8 +635,7 @@ const Chat = () => {
                             {
                                 type: 'system',
                                 content: {
-                                    response:
-                                        'Switched to web browsing mode (beta)'
+                                    response: translate('default.webSearchMode', currentLanguage)
                                 },
                                 documents: [],
                                 timestamp: new Date()
@@ -589,7 +647,9 @@ const Chat = () => {
                 setIsDocumentAnalysis(false);
                 response = await chatApi.sendMessage(content.trim(), {
                     conversationId: currentconversationId,
-                    webSearch: isWebMode
+                    webSearch: isWebMode,
+                    language: currentLanguage,
+                    detailedMode: isDetailedMode
                 });
                 setCurrentconversationId(response.conversationId);
                 if (isWebMode) {
@@ -598,8 +658,7 @@ const Chat = () => {
                         {
                             type: 'system',
                             content: {
-                                response:
-                                    'Searching the web for relevant sources...'
+                                response: translate('default.searchingWeb', currentLanguage)
                             },
                             timestamp: new Date()
                         }
@@ -635,6 +694,12 @@ const Chat = () => {
                 'currentChatMessages',
                 JSON.stringify(messages)
             );
+
+            // If text-to-speech is enabled, speak the response
+            if (isTextToSpeechEnabled) {
+                const responseText = response.response || response.message;
+                setCurrentSpeakingMessage(responseText);
+            }
         } catch (error) {
             console.error('Chat error:', error);
             setIsTyping(false);
@@ -663,7 +728,7 @@ const Chat = () => {
 
     const handleSelectPrompt = (promptText) => {
         setMessage(promptText);
-        inputRef.current?.focus();
+        sendMessage(promptText);
     };
 
     const createNewChat = async () => {
@@ -676,7 +741,7 @@ const Chat = () => {
                 {
                     type: 'assistant',
                     content: {
-                        response: defaultGreeting,
+                        response: translate('default.greeting', currentLanguage).replace('{name}', userName),
                         query: null
                     },
                     timestamp: new Date()
@@ -723,7 +788,7 @@ const Chat = () => {
                 {
                     type: 'assistant',
                     content: {
-                        response: defaultGreeting,
+                        response: translate('default.greeting', currentLanguage).replace('{name}', userName),
                         query: null
                     },
                     timestamp: new Date()
@@ -745,7 +810,9 @@ const Chat = () => {
             ...prev,
             {
                 type: 'system',
-                content: 'Switched to general conversation mode',
+                content: {
+                    response: translate('default.generalChat', currentLanguage)
+                },
                 timestamp: new Date()
             }
         ]);
@@ -755,494 +822,182 @@ const Chat = () => {
         navigate('/register');
     };
 
-    const isMobile = () => window.innerWidth < 768;
-
-    const MessageBubble = ({ message }) => {
-        const [isCopied, setIsCopied] = useState(false);
-        const timeoutRef = useRef(null);
-
-        const handleCopy = async () => {
-            try {
-                await navigator.clipboard.writeText(message.content.response);
-                setIsCopied(true);
-
-                // Reset the "Copied!" message after 2 seconds
-                if (timeoutRef.current) clearTimeout(timeoutRef.current);
-                timeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
-            } catch (err) {
-                console.error('Failed to copy:', err);
-            }
-        };
-
-        const isUser = message.type === 'user';
-        const isError = message.type === 'error';
-        const isSystem = message.type === 'system';
-
-        // Updated message type classes
-        const messageTypeClasses = isUser
-            ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
-            : isError
-              ? 'bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl'
-              : isSystem
-                ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
-                : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
-
-        const getSiteIcon = (url) => {
-            try {
-                const hostname = new URL(url).hostname.toLowerCase();
-                if (hostname.includes('wikipedia.org')) return 'Wikipedia';
-                if (hostname.includes('google.com')) return 'Google';
-                if (hostname.includes('facebook.com')) return 'Facebook';
-                return 'Default';
-            } catch {
-                return 'Default';
-            }
-        };
-
-        const formatTextWithBold = (text) => {
-            const parts = text.split(/(\*\*[^*]+\*\*)/g);
-            return parts.map((part, index) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                    return (
-                        <strong key={index}>
-                            {part.slice(2, -2)}
-                        </strong>
-                    );
-                }
-                return part;
-            });
-        };
-
-        return (
-            <div
-                className={`group flex items-end gap-2 px-2 ${isUser ? 'justify-end' : 'justify-start'}`}
-            >
-                {/* Assistant/System Avatar - Adjusted size */}
-                {(message.type === 'assistant' ||
-                    message.type === 'system') && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center mb-1">
-                        {message.type === 'system' ? (
-                            <IconComponents.System className="w-5 h-5 text-white" />
-                        ) : (
-                            <IconComponents.MessageCircle className="w-5 h-5 text-white" />
-                        )}
-                    </div>
-                )}
-
-                <div
-                    className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-1 ${
-                        message.type === 'user' ? 'ml-auto' : ''
-                    }`}
-                >
-                    <div
-                        className={`px-3 py-2 ${
-                            message.type === 'user'
-                                ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
-                                : message.type === 'system'
-                                  ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
-                                  : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
-                        }`}
-                    >
-                        {/* Show typing animation only if message is empty and isTyping is true */}
-                        {message.content.response === '' && isTyping ? (
-                            <TypingAnimation />
-                        ) : (
-                            <p className="whitespace-pre-wrap text-sm">
-                                {message.type === 'user'
-                                    ? message.content.query
-                                    : formatTextWithBold(message.content.response)}
-                            </p>
-                        )}
-
-                        {/* Document Preview - Inside the message bubble */}
-                        {message.documents && message.documents.length > 0 && (
-                            <div className="mt-3 border-t border-slate-500/30 pt-3">
-                                {message.documents.map((doc, index) => (
-                                    <DocumentPreview
-                                        key={index}
-                                        document={doc}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {!(message.type === 'user') &&
-                        (message.type === 'system' ||
-                            message.type === 'assistant') && (
-                            <div className="mt-2 space-y-2">
-                                {/* Show web sources if they exist */}
-                                {message.isWebSearch && (
-                                    <>
-                                        <div className="flex items-center gap-1.5 px-1">
-                                            <IconComponents.Globe className="w-3.5 h-3.5 text-blue-400" />
-                                            <span className="text-xs font-medium text-blue-400">
-                                                Web References
-                                            </span>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {[
-                                                {
-                                                    url: 'https://www.google.com/',
-                                                    title: 'Google Search Results'
-                                                },
-                                                {
-                                                    url: 'https://wikipedia.org/',
-                                                    title: 'Wikipedia Reference'
-                                                },
-                                                {
-                                                    url: 'https://facebook.com/',
-                                                    title: 'Public Information'
-                                                }
-                                            ].map((source, index) => {
-                                                const SiteIcon =
-                                                    IconComponents[
-                                                        getSiteIcon(source.url)
-                                                    ];
-                                                return (
-                                                    <a
-                                                        key={index}
-                                                        href={source.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="block p-2 rounded-lg bg-slate-800/50 border border-slate-700/50 
-                                   hover:bg-slate-700/50 transition-colors"
-                                                    >
-                                                        <div className="flex items-start gap-2">
-                                                            <div className="flex-shrink-0 w-4 h-4 mt-0.5 text-slate-400">
-                                                                <SiteIcon className="w-full h-full" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <h4 className="text-sm text-blue-400 font-medium truncate mb-0.5">
-                                                                    {source.title ||
-                                                                        'Web Source'}
-                                                                </h4>
-                                                                <p className="text-xs text-slate-400 truncate">
-                                                                    {source.url}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                );
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-
-                    {/* Timestamp */}
-                    <div
-                        className={`flex items-center gap-2 text-xs text-slate-400 ${
-                            message.type === 'user'
-                                ? 'justify-end'
-                                : 'justify-start'
-                        }`}
-                    >
-                        <span className="opacity-60">
-                            {new Date(message.timestamp).toLocaleTimeString(
-                                [],
-                                {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                }
-                            )}
-                        </span>
-                    </div>
-                </div>
-
-                {/* User Avatar - Also adjusted size for consistency */}
-                {message.type === 'user' && (
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-600 flex items-center justify-center mb-1">
-                        <IconComponents.User className="w-5 h-5 text-white" />
-                    </div>
-                )}
-            </div>
-        );
+    const isMobile = () => {
+        return window.innerWidth < 768;
     };
 
-    // Add toggle function for history
-    const toggleHistory = () => {
-        if (!isHistoryOpen) {
-            fetchConversations();
+    const handleSelectChat = async (conversationId) => {
+        if (isIncognito) return; // Disable chat selection in incognito mode
+        
+        try {
+            const response = await chatApi.getConversation(conversationId);
+            if (response?.messages) {
+                setMessages(response.messages.map(msg => ({
+                    ...msg,
+                    timestamp: new Date(msg.timestamp)
+                })));
+                setCurrentconversationId(conversationId);
+                setIsNewConversation(false);
+                setIsDocumentAnalysis(false);
+                setDocumentAnalysisId(null);
+                setIsWebMode(false);
+                
+                // Close history panel on mobile after selection
+                if (window.innerWidth < 768) {
+                    setIsHistoryOpen(false);
+                }
+                
+                // Scroll to bottom after loading chat
+                chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }
+        } catch (error) {
+            console.error('Failed to load conversation:', error);
+            // Show error message to user using the translation
+            setMessages([{
+                type: 'error',
+                content: {
+                    response: translate('default.loadError', currentLanguage)
+                },
+                timestamp: new Date()
+            }]);
         }
+    };
+
+    // Add toggleHistory function
+    const toggleHistory = () => {
         setIsHistoryOpen(!isHistoryOpen);
     };
 
-    // Add new function to handle textarea height
-    const adjustTextareaHeight = (element) => {
-        element.style.height = 'auto'; // Reset height to recalculate
-        const newHeight = Math.min(element.scrollHeight, 120); // Max height of 120px
-        element.style.height = !element.value ? '44px' : `${newHeight}px`; // Default height when empty
-    };
-
-    // Update message state handler to include height adjustment
-    const handleMessageChange = (e) => {
-        setMessage(e.target.value);
-        adjustTextareaHeight(e.target);
-    };
-
-    // Add new effect to handle page reload
-    useEffect(() => {
-        const restoreChat = async () => {
-            // Try to get last conversation from localStorage
-            const lastConversationId =
-                localStorage.getItem('lastConversationId');
-            const savedMessages = JSON.parse(
-                localStorage.getItem('currentChatMessages') || '[]'
-            );
-
-            if (savedMessages.length > 0) {
-                setMessages(savedMessages);
-            }
-
-            if (lastConversationId) {
-                try {
-                    await handleSelectChat(lastConversationId);
-                } catch (error) {
-                    console.error('Failed to restore chat:', error);
-                    // If chat restoration fails, start a new chat
-                    createNewChat();
-                }
-            }
-
-            // Scroll to bottom after restoring chat
-            chatContainerRef.current?.scrollIntoView({ behavior: 'smooth' });
-        };
-
-        restoreChat();
-    }, []);
-
-    // Add effect to save current chat state
-    useEffect(() => {
-        if (messages.length > 0) {
-            localStorage.setItem(
-                'currentChatMessages',
-                JSON.stringify(messages)
-            );
-        }
-        if (currentconversationId) {
-            localStorage.setItem('lastConversationId', currentconversationId);
-        }
-    }, [messages, currentconversationId]);
-
-    // Modify handleSelectChat to close history on desktop
-    const handleSelectChat = async (conversationId) => {
-        if (isIncognito) return;
-
-        try {
-            const conversation =
-                await chatApi.getConversationById(conversationId);
-            if (!conversation) {
-                throw new Error('Chat not found');
-            }
-
-            // Transform messages to match the new structure
-            const formattedMessages = [];
-            if (conversation.type === 'document-analysis') {
-                const documents = [];
-
-                conversation.messages.forEach((msg) => {
-                    documents.push(...msg.documents);
-                });
-
-                formattedMessages.push({
-                    type: 'system',
-                    content: {
-                        response: 'Uploaded documents:'
-                    },
-                    documents,
-                    timestamp: new Date()
-                });
-            }
-            conversation.messages.forEach((msg) => {
-                // First add the user message if it exists
-                if (msg.content.query) {
-                    formattedMessages.push({
-                        type: 'user',
-                        content: {
-                            query: msg.content.query
-                        },
-                        timestamp: msg.timestamp
-                    });
-                }
-
-                // Then add web search indicator before the response if it's a web search
-                if (msg.isWebSearch) {
-                    formattedMessages.push({
-                        type: 'system',
-                        content: {
-                            response: 'Sources:'
-                        },
-                        isWebSearch: true,
-                        timestamp: msg.timestamp
-                    });
-                }
-
-                // Finally add the assistant response
-                formattedMessages.push({
-                    type: msg.isWebSearch ? 'system' : 'assistant',
-                    content: {
-                        response: msg.content.response
-                    },
-                    isWebSearch: msg.isWebSearch,
-                    timestamp: msg.timestamp
-                });
-            });
-
-            if (conversation.type === 'document-analysis') {
-                setDocumentAnalysisId(conversation._id);
-                setIsDocumentAnalysis(true);
-                setCurrentconversationId(null);
-                localStorage.setItem('lastConversationId', conversation._id);
-            } else {
-                setDocumentAnalysisId(null);
-                setIsDocumentAnalysis(false);
-                setCurrentconversationId(conversation._id);
-                localStorage.setItem('lastConversationId', conversation._id);
-            }
-
-            localStorage.setItem('lastConversationId', conversation._id);
-            localStorage.setItem(
-                'currentChatMessages',
-                JSON.stringify(formattedMessages)
-            );
-            setMessages(formattedMessages);
-            setIsNewConversation(false);
-
-            // Add this to close history on desktop after selecting chat
-            if (window.innerWidth >= 768) {
-                setIsHistoryOpen(false);
-            }
-        } catch (error) {
-            console.error('Failed to fetch chat:', error);
-
-            // Clear saved state if chat not found
-            if (error.message === 'Chat not found') {
-                localStorage.removeItem('lastConversationId');
-                localStorage.removeItem('currentChatMessages');
-                createNewChat();
-            }
-
-            if (isNewConversation) {
-                return;
-            }
-
-            setMessages((prev) => [
-                ...prev,
-                {
-                    type: 'error',
-                    content:
-                        'Failed to load conversation. Starting a new chat.',
-                    timestamp: new Date()
-                }
-            ]);
-            localStorage.removeItem('lastConversationId');
-            localStorage.removeItem('currentChatMessages');
-            createNewChat();
-        }
+    // Update the handleDocumentUploadClick function
+    const handleDocumentUploadClick = () => {
+        // Directly trigger file selection
+        fileInputRef.current?.click();
+        setIsToolsOpen(false); // Close tools dropdown
     };
 
     return (
-        <div className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800">
-            {/* Left Sidebar - Fixed width */}
-            <div className="hidden md:block w-64 flex-shrink-0">
-                <Sidebar
-                    user={user}
-                    onSelectPrompt={handleSelectPrompt}
-                    isTempUser={isTempUser}
-                />
-            </div>
-
-            {/* Main Chat Area - More compact and fixed */}
-            <div
-                className={`flex-1 flex flex-col h-full min-w-0 transition-all duration-300
-                    ${isHistoryOpen ? 'md:mr-72' : 'md:mr-0'}`}
-            >
-                {/* Header - More compact */}
-                <div className="flex items-center h-14 px-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
-                    <div className="flex items-center space-x-4">
-                        {/* Mobile menu button - Made visible */}
-                        <button
-                            onClick={() => setIsMobileMenuOpen(true)}
-                            className="md:hidden p-2 hover:bg-slate-700/50 rounded-lg"
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                />
-                            </svg>
-                        </button>
-
-                        <div className="flex items-center space-x-3">
-                            <div
-                                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 
-                           flex items-center justify-center"
-                            >
-                                <IconComponents.MessageCircle className="w-4 h-4 text-white" />
-                            </div>
-                            <div className="hidden sm:block">
-                                <h1 className="text-base font-semibold text-white leading-none">
-                                    Legal Assistant
-                                </h1>
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                    AI-powered legal research
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Right side controls - Updated for mobile */}
-                    <div className="flex-1 flex justify-end items-center space-x-2">
-                        <button
-                            onClick={toggleHistory}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            title={
-                                isHistoryOpen ? 'Hide history' : 'Show history'
+        <div className={`flex h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
+            {/* Hidden file input for document upload */}
+            <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    
+                    try {
+                        // Show loading state
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                type: 'system',
+                                content: {
+                                    response: translate('default.documentUploading', currentLanguage).replace('{name}', file.name)
+                                },
+                                timestamp: new Date()
                             }
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d={
-                                        isHistoryOpen
-                                            ? 'M19 9l-7 7-7-7'
-                                            : 'M19 9l-7 7-7-7'
-                                    }
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                        ]);
+                        
+                        // Instead of using documentsApi, use the chatApi to handle the document
+                        const response = await chatApi.sendDocument(file);
+                        
+                        // Create a document object from the file
+                        const document = {
+                            _id: new Date().getTime().toString(), // Generate a temporary ID
+                            name: file.name,
+                            type: file.type,
+                            size: file.size
+                        };
+                        
+                        // Handle successful upload
+                        setUploadedDocuments((prev) => [...prev, document]);
+                        setActiveDocuments((prev) => {
+                            const newActiveDocuments = [...prev, document._id];
+                            return newActiveDocuments;
+                        });
+                        
+                        // Toggle document analysis mode
+                        setIsDocumentAnalysis(true);
+                        setIsWebMode(false);
+                        
+                        // Add system message about document upload
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                type: 'system',
+                                content: {
+                                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
+                                },
+                                documents: [document],
+                                timestamp: new Date()
+                            }
+                        ]);
+                        
+                        // Reset the file input
+                        event.target.value = '';
+                    } catch (error) {
+                        console.error('Failed to upload document:', error);
+                        setMessages((prev) => [
+                            ...prev,
+                            {
+                                type: 'error',
+                                content: {
+                                    response: translate('default.uploadError', currentLanguage).replace('{error}', error.message || 'Unknown error')
+                                },
+                                timestamp: new Date()
+                            }
+                        ]);
+                    }
+                }}
+            />
 
-                {/* Messages Container - Updated padding and spacing */}
-                <div className="flex-1 overflow-y-auto bg-slate-900">
-                    <div className="max-w-3xl mx-auto py-4 space-y-3">
+            {/* Sidebar */}
+            <Sidebar 
+                user={user} 
+                onSelectPrompt={handleSelectPrompt}
+                onDocumentUploadClick={handleDocumentUploadClick}
+            />
+
+            {/* Main content */}
+            <div className="flex-1 flex flex-col">
+                {/* Chat header */}
+                <ChatHeader 
+                    onDocumentUploadClick={handleDocumentUploadClick}
+                    setIsHistoryOpen={setIsHistoryOpen}
+                    isHistoryOpen={isHistoryOpen}
+                />
+
+                {/* Chat history */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="max-w-4xl mx-auto py-3 space-y-2 pb-40 md:pb-4">
                         {messages.map((message, index) => (
-                            <MessageBubble key={index} message={message} />
+                            <MessageBubble 
+                                key={index} 
+                                message={message} 
+                                handleTextToSpeechToggle={() => handleSpeakMessage(message.content.response)}
+                                IconComponents={IconComponents}
+                            />
                         ))}
                         {isTyping && (
-                            <div className="flex items-start gap-2 px-2">
-                                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                                    <IconComponents.MessageCircle className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="rounded-2xl bg-slate-700/50 backdrop-blur-sm px-3 py-2 max-w-[75%] md:max-w-[65%]">
-                                    <TypingAnimation />
+                            <div className="flex mb-3">
+                                <div className="flex flex-row max-w-[85%]">
+                                    {/* Avatar */}
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full ${
+                                        isDark ? 'bg-blue-600' : 'bg-blue-500'
+                                    } flex items-center justify-center self-start mt-1 mr-2`}>
+                                        <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+                                    </div>
+                                    
+                                    {/* Message content */}
+                                    <div className="flex flex-col">
+                                        <div className={`px-3 py-2 rounded-lg ${
+                                            isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
+                                        }`}>
+                                            <TypingAnimation />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -1250,173 +1005,34 @@ const Chat = () => {
                     </div>
                 </div>
 
-                {/* Input Area - Adjusted padding bottom */}
-                <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-6 md:pb-0">
-                    <div className="max-w-2xl mx-auto p-4">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="relative space-y-2"
-                        >
-                            <div className="relative mb-4">
-                                <textarea
-                                    ref={inputRef}
-                                    value={message}
-                                    onChange={handleMessageChange}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSubmit(e);
-                                            // Reset height after sending
-                                            e.target.style.height = '44px';
-                                        }
-                                    }}
-                                    placeholder={
-                                        isTempUser
-                                            ? 'Register to chat...'
-                                            : isWebMode
-                                              ? 'Search the web for legal information...'
-                                              : 'Ask any legal question...'
-                                    }
-                                    className={`w-full rounded-lg pl-3 pr-20 py-2 
-                            bg-slate-700/50 border text-white placeholder-slate-400 
-                            text-sm resize-none overflow-hidden leading-normal 
-                            transition-all duration-200
-                            ${
-                                isWebMode
-                                    ? 'border-blue-500/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-                                    : 'border-slate-600/50 focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20'
-                            }`}
-                                    disabled={isTyping || isTempUser}
-                                    rows="1"
-                                    style={{ height: '44px' }} // Default height
-                                />
-
-                                {/* Action buttons container with adjusted spacing */}
-                                <div className="absolute right-2 top-0 h-full flex items-center gap-1.5">
-                                    <div className="relative">
-                                        {/* Tools Menu Button */}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsToolsOpen(!isToolsOpen)
-                                            }
-                                            className={`p-1.5 rounded-lg transition-all duration-200 flex items-center justify-center
-                                ${isToolsOpen ? 'bg-slate-700/50 text-white' : 'text-slate-400 hover:text-white'}`}
-                                            title="Show tools"
-                                        >
-                                            <IconComponents.Tools className="w-4 h-4" />
-                                        </button>
-
-                                        {/* Expandable Tools Menu */}
-                                        <div
-                                            className={`absolute bottom-full right-0 mb-2 transition-all duration-200 transform
-                                    ${isToolsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
-                                    bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm`}
-                                        >
-                                            <div className="p-2 flex items-center gap-2">
-                                                <VoiceChat
-                                                    onVoiceInput={
-                                                        handleVoiceInput
-                                                    }
-                                                    disabled={
-                                                        isTyping || isTempUser
-                                                    }
-                                                    onSubmit={sendMessage}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (!isWebMode) {
-                                                            setDocumentAnalysisId(
-                                                                null
-                                                            );
-                                                            setIsDocumentAnalysis(
-                                                                false
-                                                            );
-                                                        }
-                                                        setIsWebMode(
-                                                            !isWebMode
-                                                        );
-                                                    }}
-                                                    className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
-                                    ${
-                                        isWebMode
-                                            ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50'
-                                            : 'text-slate-400 hover:text-white'
-                                    }`}
-                                                    disabled={isTempUser}
-                                                    title={
-                                                        isWebMode
-                                                            ? 'Web search enabled'
-                                                            : 'Enable web search'
-                                                    }
-                                                >
-                                                    <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
-                                                </button>
-                                                <DocumentUploader
-                                                    onDocumentSelect={
-                                                        handleDocumentSelect
-                                                    }
-                                                    onUploadComplete={
-                                                        handleUploadComplete
-                                                    }
-                                                    className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
-                                                    disabled={isTempUser}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Send Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            isTyping ||
-                                            !message.trim() ||
-                                            isTempUser
-                                        }
-                                        className="p-1.5 rounded-lg transition-colors flex items-center justify-center
-                              text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <IconComponents.Send className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                {/* Web Search Indicator - Update positioning */}
-                                {isWebMode && (
-                                    <div
-                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
-                                  transform transition-all duration-300 ease-in-out opacity-100"
-                                    >
-                                        <IconComponents.Globe className="w-3 h-3" />
-                                        <span className="flex items-center gap-1">
-                                            Web search enabled
-                                            <span
-                                                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] 
-                                      bg-blue-500/10 border border-blue-500/20 text-blue-400"
-                                            >
-                                                beta
-                                            </span>
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </form>
-                    </div>
+                {/* Desktop Input area */}
+                <div className="hidden md:block">
+                    <ChatInput 
+                        message={message}
+                        handleMessageChange={handleMessageChange}
+                        handleSubmit={handleSubmit}
+                        isTyping={isTyping}
+                        isTempUser={isTempUser}
+                        isWebMode={isWebMode}
+                        isDetailedMode={isDetailedMode}
+                        isToolsOpen={isToolsOpen}
+                        setIsToolsOpen={setIsToolsOpen}
+                        IconComponents={IconComponents}
+                        handleDetailedModeToggle={handleDetailedModeToggle}
+                        handleTextToSpeechToggle={handleTextToSpeechToggle}
+                        isTextToSpeechEnabled={isTextToSpeechEnabled}
+                        handleDocumentUploadClick={handleDocumentUploadClick}
+                        setIsWebMode={setIsWebMode}
+                        setDocumentAnalysisId={setDocumentAnalysisId}
+                        setIsDocumentAnalysis={setIsDocumentAnalysis}
+                    />
                 </div>
             </div>
 
-            {/* Update the ChatHistory wrapper div */}
-            <div
+            {/* Chat history sidebar */}
+            <div 
+                className={`fixed top-0 right-0 h-full bg-slate-800 border-l border-slate-700/50 overflow-y-auto transition-transform duration-300 ease-in-out ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'} w-full md:w-72 z-50`}
                 ref={historyRef}
-                className={`
-          fixed inset-y-0 right-0 
-          md:block 
-          transition-transform duration-300 ease-in-out
-          ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}
-          ${isMobile() ? 'w-full md:w-72' : 'hidden w-72'}
-          z-50
-        `}
             >
                 <ChatHistory
                     conversations={conversations}
@@ -1426,7 +1042,7 @@ const Chat = () => {
                     onNewChat={handleNewChat}
                     isOpen={isHistoryOpen}
                     currentconversationId={currentconversationId}
-                    onClose={toggleHistory}
+                    onClose={() => setIsHistoryOpen(false)}
                 />
             </div>
 
@@ -1437,85 +1053,44 @@ const Chat = () => {
                 isTempUser={isTempUser}
                 isOpen={isMobileMenuOpen}
                 onClose={() => setIsMobileMenuOpen(false)}
-            />
+            />  
 
-            {/* Mobile Bottom Bar - Added top border and spacing */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50">
-                <div className="flex items-center justify-around p-3">
-                    <button
-                        onClick={handleNewChat}
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4v16m8-8H4"
-                            />
-                        </svg>
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (!isWebMode) {
-                                setDocumentAnalysisId(null);
-                                setIsDocumentAnalysis(false);
-                            }
-                            setIsWebMode(!isWebMode);
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${
-                            isWebMode ? 'text-blue-400' : 'text-slate-400'
-                        }`}
-                    >
-                        <IconComponents.Globe className="w-5 h-5" />
-                    </button>
-
-                    <button
-                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                        className={`p-2 rounded-lg transition-colors ${
-                            isHistoryOpen ? 'text-blue-400' : 'text-slate-400'
-                        }`}
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 6h16M4 12h16M4 18h7"
-                            />
-                        </svg>
-                    </button>
-
-                    <button
-                        onClick={() => setIsMobileMenuOpen(true)}
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                            />
-                        </svg>
-                    </button>
+            {/* Mobile Bottom Bar with input field */}
+            <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${
+                isDark ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'
+            } pb-safe`}>
+                {/* Mobile input field */}
+                <div className="border-t border-b border-gray-200 dark:border-slate-700/50">
+                    <MobileInput 
+                        message={message}
+                        handleMessageChange={handleMessageChange}
+                        handleSubmit={handleSubmit}
+                        isTyping={isTyping}
+                        isTempUser={isTempUser}
+                        isWebMode={isWebMode}
+                        isDetailedMode={isDetailedMode}
+                        isToolsOpen={isToolsOpen}
+                        setIsToolsOpen={setIsToolsOpen}
+                        IconComponents={IconComponents}
+                    />
                 </div>
+                
+                {/* Mobile bottom navigation */}
+                <MobileBottomBar 
+                    handleNewChat={handleNewChat}
+                    isWebMode={isWebMode}
+                    setIsWebMode={setIsWebMode}
+                    setDocumentAnalysisId={setDocumentAnalysisId}
+                    setIsDocumentAnalysis={setIsDocumentAnalysis}
+                    setIsHistoryOpen={setIsHistoryOpen}
+                    isHistoryOpen={isHistoryOpen}
+                    language={currentLanguage}
+                    handleLanguageChange={() => {}}
+                    IconComponents={IconComponents}
+                    handleDocumentUploadClick={handleDocumentUploadClick}
+                    isDetailedMode={isDetailedMode}
+                    handleDetailedModeToggle={handleDetailedModeToggle}
+                />
             </div>
         </div>
     );

@@ -1,5 +1,6 @@
 import { authService } from '../services/authService';
 import { getAuthToken } from './auth';
+import { documentService } from '../services/documentService';
 
 const BASE_URL =
     'https://case-bud-backend-1.onrender.com'; // Ensure this URL is correct
@@ -91,53 +92,25 @@ const retryWithDelay = async (fn, retries = MAX_RETRIES) => {
 };
 
 export const chatApi = {
-    sendMessage: async (content, options = {}) => {
-        const makeRequest = async () => {
-            // Format request body with context
-            const requestBody = {
-                query: content,
-                conversationId: options.conversationId,
-                webSearch: options.webSearch || false
-                // context: options.context || null // Include context in request
-                // NIGGA i thought you said you didnt push any context stuff 💀
-            };
-
-            const response = await fetchWithToken(
-                '/api/chat/standard-conversation',
-                {
-                    method: 'POST',
-                    body: JSON.stringify(requestBody)
-                }
-            );
-
-            if (!response) {
-                throw new ApiError('No response from server', 500);
-            }
-
-            return response;
-        };
-
+    sendMessage: async (message, options = {}) => {
+        const { conversationId = null, webSearch = false, language = 'en-US', detailedMode = false } = options;
+        
         try {
-            const response = await retryWithDelay(makeRequest);
-
-            return {
-                response: response.response || response.message,
-                message: response.message,
-                conversationId: response.conversationId,
-                responseId: response.responseId,
-                title: response.title,
-                isWebSearch: response.webSearch
-                // webSources: response.webSources
-                // context: response.context // Return context from response
-            };
-        } catch (error) {
-            console.error('Send message failed:', {
-                status: error.status,
-                message: error.message,
-                data: error.data,
-                content,
-                options
+            const endpoint = '/api/chat';
+            const response = await fetchWithToken(endpoint, {
+                method: 'POST',
+                body: JSON.stringify({
+                    message,
+                    conversationId,
+                    webSearch,
+                    language,
+                    detailedMode
+                })
             });
+            
+            return response;
+        } catch (error) {
+            console.error('Chat error:', error);
             throw error;
         }
     },
@@ -207,42 +180,56 @@ export const chatApi = {
     uploadDocument: () => Promise.resolve({ id: Date.now() }),
     sendDocumentAnalysis: (query) => chatApi.sendMessage(query),
 
-    sendDocumentAnalysis: async (query, documentIds, conversationId = null) => {
+    sendDocumentAnalysis: async (query, documentIds, conversationId = null, language = 'en-US') => {
         try {
-            const response = await fetchWithToken(
-                '/api/chat/document-analysis',
-                {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        query,
-                        documentIds: documentIds,
-                        conversationId: conversationId
-                    })
-                }
-            );
-
-            if (!response) {
-                throw new Error('No response from server');
-            }
-
-            // Ensure consistent response format
-            return {
-                response: response.response || response.message,
-                message: response.message,
-                conversationId: response.conversationId,
-                title: response.title
-                // webSources: [] // Empty array for document analysis mode
-                // context: response.context || null
-            };
-        } catch (error) {
-            console.error('Document analysis failed:', {
-                error,
-                query,
-                documentIds,
-                conversationId
+            const endpoint = '/api/chat/document-analysis';
+            const response = await fetchWithToken(endpoint, {
+                method: 'POST',
+                body: JSON.stringify({
+                    query,
+                    documentIds,
+                    conversationId,
+                    language
+                })
             });
+            
+            return response;
+        } catch (error) {
+            console.error('Document analysis error:', error);
             throw error;
         }
+    },
+
+    sendDocument: async (file) => {
+        // If you don't have an actual upload endpoint, you can simulate success
+        // or use a different endpoint that can process the document content
+        
+        // For now, just return a success response
+        return {
+            success: true,
+            message: "Document processed successfully"
+        };
+        
+        // If you do have an endpoint that can analyze documents without storing them:
+        /*
+        const formData = new FormData();
+        formData.append('document', file);
+        
+        const response = await fetch('https://your-api-endpoint/analyze-document', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authService.getToken()}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to process document');
+        }
+        
+        return await response.json();
+        */
     }
     //this endpoint doesn't even exist 💀
 };
@@ -284,6 +271,89 @@ export const documentsApi = {
                 response: error.response
             });
             throw error;
+        }
+    },
+    
+    // Document Editor API functions - using local storage until backend is ready
+    saveDocument: async (document) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.saveDocument(document);
+        } catch (error) {
+            console.error('Error saving document:', error);
+            throw error;
+        }
+    },
+    
+    getDocument: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            const document = documentService.getDocument(documentId);
+            
+            if (!document) {
+                throw new Error('Document not found');
+            }
+            
+            return document;
+        } catch (error) {
+            console.error('Error getting document:', error);
+            throw error;
+        }
+    },
+    
+    getDocuments: async () => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            const documents = documentService.getDocuments();
+            return { documents };
+        } catch (error) {
+            console.error('Error getting documents:', error);
+            throw error;
+        }
+    },
+    
+    deleteDocument: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.deleteDocument(documentId);
+        } catch (error) {
+            console.error('Error deleting document:', error);
+            throw error;
+        }
+    },
+    
+    getRevisions: async (documentId) => {
+        try {
+            // When backend is ready, this will be replaced with an API call
+            // For now, use local storage via documentService
+            return documentService.getRevisions(documentId);
+        } catch (error) {
+            console.error('Error getting revisions:', error);
+            throw error;
+        }
+    },
+    
+    // AI Document Assistance API - placeholder until backend is ready
+    getAIAssistance: async (prompt, content, selectedText = null) => {
+        console.log('Getting AI assistance:', { prompt, selectedText });
+        
+        // Mock AI response with a delay to simulate processing
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        if (selectedText) {
+            // If text is selected, return enhanced version of that text
+            return {
+                suggestion: `${selectedText} [AI-enhanced based on prompt: "${prompt}"]`
+            };
+        } else {
+            // If no text is selected, return enhanced version of the entire content
+            return {
+                suggestion: `${content}\n\n[AI-enhanced based on prompt: "${prompt}"]`
+            };
         }
     }
 };
