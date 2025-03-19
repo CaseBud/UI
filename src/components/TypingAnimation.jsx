@@ -1,20 +1,18 @@
 import React from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
 const TypingAnimation = () => {
-    const { isDark } = useTheme();
+    const { currentLanguage } = useLanguage();
     
     return (
-        <div className="flex space-x-1.5 p-2">
-            <div className={`w-2 h-2 rounded-full animate-pulse ${
-                isDark ? 'bg-slate-400' : 'bg-gray-400'
-            }`}></div>
-            <div className={`w-2 h-2 rounded-full animate-pulse animation-delay-200 ${
-                isDark ? 'bg-slate-400' : 'bg-gray-400'
-            }`}></div>
-            <div className={`w-2 h-2 rounded-full animate-pulse animation-delay-400 ${
-                isDark ? 'bg-slate-400' : 'bg-gray-400'
-            }`}></div>
+        <div className="flex items-center space-x-2 px-3 py-2 rounded-md bg-slate-800 text-slate-400 text-sm w-fit">
+            <span>{translate('chat.typing', currentLanguage)}</span>
+            <span className="flex space-x-1">
+                <span className="animate-bounce delay-75" style={{ animationDuration: '1s' }}>.</span>
+                <span className="animate-bounce delay-100" style={{ animationDuration: '1s', animationDelay: '0.1s' }}>.</span>
+                <span className="animate-bounce delay-150" style={{ animationDuration: '1s', animationDelay: '0.2s' }}>.</span>
+            </span>
         </div>
     );
 };

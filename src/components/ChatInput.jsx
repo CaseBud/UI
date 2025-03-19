@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
 const ChatInput = ({ 
     message, 
@@ -21,6 +23,7 @@ const ChatInput = ({
     setIsDocumentAnalysis
 }) => {
     const { isDark, lightModeBaseColor } = useTheme();
+    const { currentLanguage } = useLanguage();
     const inputRef = useRef(null);
 
     return (
@@ -33,7 +36,7 @@ const ChatInput = ({
                     {isWebMode && (
                         <div className="flex items-center text-xs text-blue-400">
                             <IconComponents.Globe className="w-3.5 h-3.5 mr-1.5" />
-                            <span>Web search enabled</span>
+                            <span>{translate('chat.webModeEnabled', currentLanguage)}</span>
                             <span className="ml-1 px-1 py-0.5 text-xs bg-blue-500/20 rounded">beta</span>
                         </div>
                     )}
@@ -43,7 +46,7 @@ const ChatInput = ({
                             <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                             </svg>
-                            <span>Detailed reasoning enabled</span>
+                            <span>{translate('chat.detailedModeEnabled', currentLanguage)}</span>
                         </div>
                     )}
                 </div>
@@ -61,13 +64,7 @@ const ChatInput = ({
                                     e.target.style.height = '36px';
                                 }
                             }}
-                            placeholder={
-                                isTempUser
-                                    ? 'Register to chat...'
-                                    : isWebMode
-                                        ? 'Search the web for legal information...'
-                                        : 'Ask any legal question...'
-                            }
+                            placeholder={translate('chat.placeholder', currentLanguage)}
                             className={`w-full rounded-lg pl-3 pr-20 py-2
                                 ${isDark 
                                     ? 'bg-slate-700/40 text-white placeholder-slate-400 border-slate-600/40' 
@@ -100,7 +97,7 @@ const ChatInput = ({
                                             ? 'text-slate-400 hover:text-white hover:bg-slate-700/50' 
                                             : `text-gray-600 hover:text-gray-800 hover:bg-[${lightModeBaseColor}]/50`
                                     }`}
-                                    title="Show tools"
+                                    title={translate('chat.tools', currentLanguage)}
                                 >
                                     <IconComponents.Tools className="w-4 h-4" />
                                 </button>
@@ -131,7 +128,7 @@ const ChatInput = ({
                                                 }`}
                                             >
                                                 <IconComponents.Globe className="w-4 h-4" />
-                                                Web Search
+                                                {translate('chat.webSearch', currentLanguage)}
                                             </button>
                                             
                                             {/* Text to Speech */}
@@ -152,8 +149,9 @@ const ChatInput = ({
                                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <path d="M11 5L6 9H2v6h4l5 4V5z" />
                                                     <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                                                 </svg>
-                                                Text to Speech
+                                                {translate('chat.textToSpeech', currentLanguage)}
                                             </button>
                                             
                                             {/* Detailed Mode */}
@@ -196,7 +194,7 @@ const ChatInput = ({
                                                 Voice Chat
                                             </button>
                                             
-                                            {/* Document Upload - separate from Document Creation */}
+                                            {/* Document Upload */}
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -215,7 +213,7 @@ const ChatInput = ({
                                                     <line x1="12" y1="18" x2="12" y2="12" />
                                                     <line x1="9" y1="15" x2="15" y2="15" />
                                                 </svg>
-                                                Upload Document
+                                                {translate('document.upload', currentLanguage)}
                                             </button>
                                         </div>
                                     </div>
@@ -225,14 +223,23 @@ const ChatInput = ({
                             {/* Send Button */}
                             <button
                                 type="submit"
-                                disabled={isTyping || !message.trim() || isTempUser}
-                                className={`p-1.5 rounded-lg transition-colors flex items-center justify-center
-                                    ${isDark 
-                                        ? 'text-slate-400 hover:text-white disabled:text-slate-600' 
-                                        : `text-gray-600 hover:text-gray-800 disabled:text-gray-400`
+                                disabled={!message.trim() || isTyping || isTempUser}
+                                className={`p-1.5 rounded-lg flex items-center justify-center transition-all
+                                    ${message.trim() && !isTyping && !isTempUser
+                                        ? isDark
+                                            ? 'text-white bg-blue-500 hover:bg-blue-600'
+                                            : 'text-white bg-blue-500 hover:bg-blue-600'
+                                        : isDark
+                                            ? 'text-slate-400 cursor-not-allowed'
+                                            : `text-gray-600 hover:text-gray-800 disabled:text-gray-400`
                                     } disabled:cursor-not-allowed`}
+                                aria-label={translate('chat.send', currentLanguage)}
                             >
-                                <IconComponents.Send className="w-4 h-4" />
+                                {isTyping ? (
+                                    <IconComponents.Loader2 className="h-5 w-5 animate-spin" />
+                                ) : (
+                                    <IconComponents.Send className="h-5 w-5" />
+                                )}
                             </button>
                         </div>
                     </div>

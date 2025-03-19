@@ -1,23 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations';
 
-const LanguageSelector = ({ selectedLanguage, onLanguageChange }) => {
+const LanguageSelector = () => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
+    const { currentLanguage, changeLanguage, languages, getCurrentLanguageDetails } = useLanguage();
     
-    const languages = [
-        { code: 'en-US', name: 'English', flag: '🇺🇸' },
-        { code: 'es-ES', name: 'Spanish', flag: '🇪🇸' },
-        { code: 'fr-FR', name: 'French', flag: '🇫🇷' },
-        { code: 'de-DE', name: 'German', flag: '🇩🇪' },
-        { code: 'zh-CN', name: 'Chinese', flag: '🇨🇳' },
-        { code: 'ja-JP', name: 'Japanese', flag: '🇯🇵' },
-        { code: 'ko-KR', name: 'Korean', flag: '🇰🇷' },
-        { code: 'ar-SA', name: 'Arabic', flag: '🇸🇦' },
-        { code: 'hi-IN', name: 'Hindi', flag: '🇮🇳' },
-        { code: 'pt-BR', name: 'Portuguese', flag: '🇧🇷' }
-    ];
-    
-    const selectedLang = languages.find(lang => lang.code === selectedLanguage) || languages[0];
+    const selectedLang = getCurrentLanguageDetails();
     
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -40,7 +30,8 @@ const LanguageSelector = ({ selectedLanguage, onLanguageChange }) => {
                 className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 flex items-center ${
                     isOpen ? 'text-blue-400 bg-blue-500/20 ring-1 ring-blue-500/50' : 'text-slate-400 hover:text-white'
                 }`}
-                title="Select language"
+                title={translate('settings.language', currentLanguage)}
+                aria-label={translate('settings.language', currentLanguage)}
             >
                 <span className="text-lg">{selectedLang.flag}</span>
             </button>
@@ -51,11 +42,11 @@ const LanguageSelector = ({ selectedLanguage, onLanguageChange }) => {
                         <button
                             key={language.code}
                             onClick={() => {
-                                onLanguageChange(language.code);
+                                changeLanguage(language.code);
                                 setIsOpen(false);
                             }}
                             className={`w-full text-left px-4 py-2 text-sm hover:bg-slate-700 flex items-center space-x-2 ${
-                                selectedLanguage === language.code ? 'bg-slate-700 text-white' : 'text-slate-300'
+                                currentLanguage === language.code ? 'bg-slate-700 text-white' : 'text-slate-300'
                             }`}
                         >
                             <span className="text-lg">{language.flag}</span>

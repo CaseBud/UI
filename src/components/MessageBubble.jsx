@@ -1,30 +1,51 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
-import { formatText } from '../utils/textFormatter';
+import { useLanguage } from '../contexts/LanguageContext';
+import DOMPurify from 'dompurify';
+import Prism from 'prismjs';
+import 'prismjs/themes/prism-tomorrow.css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-java';
+import 'prismjs/components/prism-c';
+import 'prismjs/components/prism-cpp';
+import 'prismjs/components/prism-csharp';
+import 'prismjs/components/prism-markup';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-sql';
 
 const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) => {
-    const { isDark, lightModeBaseColor } = useTheme();
-    const [isCopied, setIsCopied] = useState(false);
-    const timeoutRef = useRef(null);
-
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(message.content.response);
-            setIsCopied(true);
-            if (timeoutRef.current) clearTimeout(timeoutRef.current);
-            timeoutRef.current = setTimeout(() => setIsCopied(false), 2000);
-        } catch (error) {
-            console.error('Failed to copy message:', error);
-        }
-    };
-
+    const { isDark } = useTheme();
+    const { currentLanguage } = useLanguage();
+    const [formattedContent, setFormattedContent] = useState('');
+    
     const isUser = message.type === 'user';
     const isSystem = message.type === 'system';
-
-    // Format the message content if it's not from the user
-    const formattedContent = !isUser && message.content.response 
-        ? formatText(message.content.response) 
-        : null;
+    const isError = message.type === 'error';
+    
+    // Format message content with code highlighting
+    useEffect(() => {
+        if (!isUser && message.content.response) {
+            const content = message.content.response;
+            // Create a temporary div to parse the HTML
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content
+                .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, language, code) => {
+                    const lang = language || 'javascript';
+                    const highlighted = Prism.highlight(
+                        code, 
+                        Prism.languages[lang] || Prism.languages.javascript, 
+                        lang
+                    );
+                    return `<pre class="language-${lang}"><code class="language-${lang}">${highlighted}</code></pre>`;
+                })
+                .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+                .replace(/\n/g, '<br />');
+            
+            const sanitized = DOMPurify.sanitize(tempDiv.innerHTML);
+            setFormattedContent(sanitized);
+        }
+    }, [message, isUser]);
 
     return (
         <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
@@ -63,49 +84,28 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
                     </div>
 
                     {/* Message Actions and Timestamp */}
-                    <div className={`flex items-center ${isUser ? 'justify-end' : 'justify-start'} mt-1`}>
-                        <div className={`text-xs ${
-                            isDark ? 'text-slate-500' : 'text-gray-600'
-                        }`}>
-                            {new Date(message.timestamp).toLocaleTimeString([], {
+                    <div className={`flex items-center text-xs mt-1 text-slate-500 ${isUser ? 'justify-end' : 'justify-start'}`}>
+                        {/* Timestamp */}
+                        <span>
+                            {message.timestamp ? new Intl.DateTimeFormat(currentLanguage, {
                                 hour: '2-digit',
                                 minute: '2-digit'
-                            })}
-                        </div>
+                            }).format(new Date(message.timestamp)) : ''}
+                        </span>
                         
-                        {!isUser && message.content.response && (
-                            <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                    onClick={handleCopy}
-                                    className={`p-1 rounded transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                    title={isCopied ? "Copied!" : "Copy to clipboard"}
-                                >
-                                    {isCopied ? (
-                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M20 6L9 17l-5-5" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                                        </svg>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={handleTextToSpeechToggle}
-                                    className={`p-1 rounded transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
-                                    }`}
-                                    title="Text to speech"
-                                >
-                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M11 5L6 9H2v6h4l5 4V5z" />
-                                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                                    </svg>
-                                </button>
-                            </div>
+                        {/* Text-to-Speech button for AI messages */}
+                        {!isUser && handleTextToSpeechToggle && (
+                            <button 
+                                onClick={() => handleTextToSpeechToggle()} 
+                                className="ml-2 p-1 hover:bg-slate-700/30 rounded-full opacity-50 hover:opacity-100 transition-opacity"
+                                aria-label="Text to speech"
+                            >
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <path d="M11 5L6 9H2v6h4l5 4V5z" />
+                                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                                </svg>
+                            </button>
                         )}
                     </div>
                 </div>
