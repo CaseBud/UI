@@ -33,6 +33,15 @@ const App = () => {
                     }
                 />
                 
+                <Route
+                    path="/voice-chat"
+                    element={
+                        <ProtectedRoute>
+                            <Chat initialMode="voice" />
+                        </ProtectedRoute>
+                    }
+                />
+                
                 {/* Document Editor Routes */}
                 <Route
                     path="/document-editor"

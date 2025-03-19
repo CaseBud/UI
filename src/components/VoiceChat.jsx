@@ -77,14 +77,14 @@ const VoiceChat = ({ onVoiceInput, disabled, onSubmit }) => {
             disabled={disabled || isProcessing}
             className={`relative p-1.5 md:p-2 rounded-lg transition-all duration-200 ${
                 isRecording
-                    ? 'text-red-400'
+                    ? 'text-red-400 bg-red-500/20 ring-1 ring-red-500/50'
                     : isProcessing
                       ? 'text-slate-500'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-700'
             }`}
             title={isRecording ? 'Stop recording' : 'Start voice input'}
         >
-            {/* Microphone Icon */}
+            {/* Updated Microphone Icon */}
             <svg
                 className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-200 ${
                     isRecording ? 'scale-110' : ''
@@ -96,10 +96,10 @@ const VoiceChat = ({ onVoiceInput, disabled, onSubmit }) => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
+                <line x1="12" y1="19" x2="12" y2="22" />
+                <line x1="9" y1="22" x2="15" y2="22" />
             </svg>
 
             {/* Recording Animation */}

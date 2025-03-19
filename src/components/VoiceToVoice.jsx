@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-const VoiceToVoice = ({ onVoiceInput, onSubmit, disabled, language = 'en-US' }) => {
+const VoiceToVoice = ({ onVoiceInput, onSubmit, disabled, language = 'en-US', isActive = false }) => {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isListening, setIsListening] = useState(false);
@@ -45,6 +45,15 @@ const VoiceToVoice = ({ onVoiceInput, onSubmit, disabled, language = 'en-US' }) 
             }
         };
     }, [language]);
+
+    // Auto-start recording when isActive is true
+    useEffect(() => {
+        if (isActive && !isRecording && !disabled) {
+            startVoiceToVoice();
+        } else if (!isActive && isRecording) {
+            stopVoiceToVoice();
+        }
+    }, [isActive, disabled]);
 
     const startVoiceToVoice = async () => {
         try {
@@ -155,13 +164,15 @@ const VoiceToVoice = ({ onVoiceInput, onSubmit, disabled, language = 'en-US' }) 
             className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 ${
                 isRecording
                     ? 'text-purple-400 bg-purple-500/20 ring-1 ring-purple-500/50'
-                    : isProcessing
-                      ? 'text-slate-500'
-                      : 'text-slate-400 hover:text-white'
+                    : isActive
+                        ? 'text-purple-400 bg-purple-500/10 ring-1 ring-purple-500/30'
+                        : isProcessing
+                            ? 'text-slate-500'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
             }`}
             title={isRecording ? 'Stop voice-to-voice' : 'Start voice-to-voice chat'}
         >
-            {/* Voice-to-Voice Icon */}
+            {/* Completely New Voice-to-Voice Icon */}
             <svg
                 className={`w-4 h-4 md:w-5 md:h-5 transition-transform duration-200 ${
                     isRecording ? 'scale-110' : ''
@@ -173,13 +184,16 @@ const VoiceToVoice = ({ onVoiceInput, onSubmit, disabled, language = 'en-US' }) 
                 strokeLinecap="round"
                 strokeLinejoin="round"
             >
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
+                {/* Microphone */}
+                <path d="M12 2a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+                <path d="M17 10v1a5 5 0 0 1-10 0v-1" />
                 
-                {/* Add speaker icon to indicate voice-to-voice */}
-                <path d="M2 15 L2 9 L6 9 L11 5 L11 19 L6 15 L2 15" transform="translate(11, 0) scale(0.5)" />
+                {/* Speaker/Sound waves */}
+                <path d="M19 14v-4" />
+                <path d="M22 12v-1" />
+                <path d="M2 12h5" />
+                <path d="M7 9l-3-3" />
+                <path d="M7 15l-3 3" />
             </svg>
 
             {/* Recording Animation */}

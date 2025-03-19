@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { chatApi } from '../utils/api';
+import { chatApi, documentsApi } from '../utils/api';
 import { authService } from '../services/authService';
 import Sidebar from './Sidebar';
 import ChatHistory from './ChatHistory';
@@ -15,6 +15,23 @@ import DocumentCreator from './DocumentCreator';
 import { useLocation, useNavigate } from 'react-router-dom';
 import MobileNav from './MobileNav';
 import MobileBottomBar from './MobileBottomBar'; // Ensure this import is correct
+import { FiFileText, FiSun, FiMoon } from 'react-icons/fi';
+
+// Format text with bold formatting (** ** syntax)
+const formatTextWithBold = (text) => {
+    if (!text) return '';
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, index) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return (
+                <strong key={index}>
+                    {part.slice(2, -2)}
+                </strong>
+            );
+        }
+        return part;
+    });
+};
 
 // Replace lucide-react imports with SVG components
 const IconComponents = {
@@ -189,7 +206,7 @@ const IconComponents = {
     )
 };
 
-const Chat = () => {
+const Chat = ({ initialMode }) => {
     const user = authService.getCurrentUser();
     // Create greeting with user's name - update this line
     const defaultGreeting = `Hello ${user?.fullName || user?.name || 'there'}! How can I help you today?`;
@@ -211,6 +228,7 @@ const Chat = () => {
     const [isTyping, setIsTyping] = useState(false);
     const chatContainerRef = useRef(null);
     const inputRef = useRef(null);
+    const fileInputRef = useRef(null);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [conversations, setConversations] = useState([]);
     const [currentconversationId, setCurrentconversationId] = useState(null);
@@ -234,6 +252,33 @@ const Chat = () => {
     const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
     const [currentSpeakingMessage, setCurrentSpeakingMessage] = useState(null);
     const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+    const [copiedMessageId, setCopiedMessageId] = useState(null); // Add state for copied message tracking
+
+    // Add initialMode prop to the Chat component
+    const [isVoiceMode, setIsVoiceMode] = useState(initialMode === 'voice');
+
+    // Add dark mode state and toggle function
+    const [darkMode, setDarkMode] = useState(true);
+
+    const toggleDarkMode = () => {
+        setDarkMode(!darkMode);
+        // You could also save this preference to localStorage
+        localStorage.setItem('darkMode', !darkMode);
+    };
+
+    // Add useEffect to load dark mode preference from localStorage
+    useEffect(() => {
+        const savedDarkMode = localStorage.getItem('darkMode');
+        if (savedDarkMode !== null) {
+            setDarkMode(savedDarkMode === 'true');
+        }
+    }, []);
+
+    useEffect(() => {
+        if (initialMode === 'voice') {
+            setIsVoiceMode(true);
+        }
+    }, [initialMode]);
 
     useEffect(() => {
         if (!isIncognito && isHistoryOpen) {
@@ -301,7 +346,7 @@ const Chat = () => {
         }
     };
 
-    const handleDeleteChat = async (conversationId) => {
+    const handleDeleteConversation = async (conversationId) => {
         if (isIncognito) return; // Disable chat deletion in incognito mode
 
         try {
@@ -359,12 +404,15 @@ const Chat = () => {
 
         try {
             if (isWebMode) {
+                setIsTyping(false);
                 return;
             }
+            
             for (let i = 0; i < characters.length; i++) {
-                if (i == 0) {
+                if (i === 0) {
                     setIsTyping(false);
                 }
+                
                 const elapsedTime = Date.now() - startTime;
                 if (elapsedTime > maxTypingTime) {
                     currentText = response;
@@ -382,7 +430,7 @@ const Chat = () => {
                     const lastIndex = newMessages.length - 1;
                     if (
                         lastIndex >= 0 &&
-                        newMessages[lastIndex].type === 'assistant'
+                        (newMessages[lastIndex].type === 'assistant' || newMessages[lastIndex].type === 'system')
                     ) {
                         newMessages[lastIndex] = {
                             ...newMessages[lastIndex],
@@ -405,7 +453,7 @@ const Chat = () => {
                 const lastIndex = newMessages.length - 1;
                 if (
                     lastIndex >= 0 &&
-                    newMessages[lastIndex].type === 'assistant'
+                    (newMessages[lastIndex].type === 'assistant' || newMessages[lastIndex].type === 'system')
                 ) {
                     newMessages[lastIndex] = {
                         ...newMessages[lastIndex],
@@ -433,43 +481,36 @@ const Chat = () => {
     };
 
     const handleUploadComplete = (response) => {
-        if (isIncognito) return;
+        if (isIncognito || !response?.data?.document) return;
+        
         const document = response.data.document;
-        console.log('Uploaded document details:', {
-            id: document._id,
-            name: document.name,
-            type: document.type,
-            size: document.size
-        });
-
-        setUploadedDocuments((prev) => [...prev, document]);
-        setActiveDocuments((prev) => {
-            const newActiveDocuments = [...prev, document._id];
-            return newActiveDocuments;
-        });
+        
+        setUploadedDocuments(prev => [...prev, document]);
+        setActiveDocuments(prev => [...prev, document._id]);
+        
         if (!isDocumentAnalysis) {
-            setMessages((prev) => [
+            setMessages(prev => [
                 ...prev,
                 {
                     type: 'system',
                     content: {
-                        response: 'Switched to document analysis chat'
+                        response: 'Switched to document analysis mode'
                     },
-                    documents: [],
                     timestamp: new Date()
                 }
             ]);
         }
+        
         setIsWebMode(false);
         setIsDocumentAnalysis(true);
-
-        setMessages((prev) => [
+        setDocumentAnalysisId(null); // Reset analysis ID for new document
+        
+        setMessages(prev => [
             ...prev,
             {
-                type: 'system',
+                type: 'system', 
                 content: {
-                    response:
-                        'Document uploaded and ready for analysis. You can now ask questions about this document.'
+                    response: `Document "${document.name}" uploaded successfully. You can now ask questions about this document.`
                 },
                 documents: [document],
                 timestamp: new Date()
@@ -542,14 +583,15 @@ const Chat = () => {
         }
     };
 
-    // Modify the sendMessage function to include the new features
+    // Modify the sendMessage function to ensure consistent message structure
     const sendMessage = async (content) => {
         if (!content?.trim() || isTyping) return;
 
+        // Create a properly structured user message
         const newUserMessage = {
             type: 'user',
             content: {
-                query: content,
+                query: content.trim(),
                 response: null
             },
             timestamp: new Date()
@@ -579,13 +621,12 @@ const Chat = () => {
                     setDocumentAnalysisId(response.conversationId);
                     setIsDocumentAnalysis(true);
 
-                    // Update: Don't add empty assistant message here
-                    // Instead, wait for the actual response
+                    // Add assistant message with proper structure
                     const assistantMessage = {
                         type: 'assistant',
                         content: {
-                            query: content,
-                            response: response.response || response.message
+                            query: content.trim(),
+                            response: response.response || response.message || ''
                         },
                         documents: [],
                         timestamp: new Date()
@@ -593,7 +634,7 @@ const Chat = () => {
 
                     setMessages((prev) => [...prev, assistantMessage]);
                     await showResponseGradually(
-                        response.response || response.message
+                        response.response || response.message || ''
                     );
                 } catch (docError) {
                     console.error('Document analysis error details:', docError);
@@ -668,29 +709,22 @@ const Chat = () => {
                             timestamp: new Date()
                         }
                     ]);
-                    // await showResponseGradually(
-                    //     messages[messages.length - 1].content.response
-                    // );
                 }
 
                 const assistantMessage = {
                     type: isWebMode ? 'system' : 'assistant',
                     content: {
-                        response: response.response || response.message
+                        query: content.trim(),
+                        response: response.response || response.message || ''
                     },
                     isWebSearch: isWebMode,
                     timestamp: new Date()
                 };
 
-                // if (isWebMode) {
-                //     // Update: Don't add empty assistant message here
-                //     // Instead, wait for the actual response
-                // }
-
                 setMessages((prev) => [...prev, assistantMessage]);
 
                 await showResponseGradually(
-                    response.response || response.message
+                    response.response || response.message || ''
                 );
             }
 
@@ -702,7 +736,7 @@ const Chat = () => {
 
             // If text-to-speech is enabled, speak the response
             if (isTextToSpeechEnabled) {
-                const responseText = response.response || response.message;
+                const responseText = response.response || response.message || '';
                 setCurrentSpeakingMessage(responseText);
             }
         } catch (error) {
@@ -712,7 +746,9 @@ const Chat = () => {
                 ...prev,
                 {
                     type: 'error',
-                    content: error.message || 'Failed to process your request.',
+                    content: {
+                        response: error.message || 'Failed to process your request.'
+                    },
                     timestamp: new Date()
                 }
             ]);
@@ -852,10 +888,10 @@ const Chat = () => {
         const messageTypeClasses = isUser
             ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
             : isError
-              ? 'bg-red-500/10 text-red-400 border border-red-500/20 rounded-2xl'
+              ? 'bg-red-500 text-white rounded-2xl'
               : isSystem
-                ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
-                : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
+                ? 'bg-slate-600 text-slate-200 rounded-2xl mx-auto'
+                : 'bg-slate-700 text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
 
         const getSiteIcon = (url) => {
             try {
@@ -869,20 +905,6 @@ const Chat = () => {
             }
         };
 
-        const formatTextWithBold = (text) => {
-            const parts = text.split(/(\*\*[^*]+\*\*)/g);
-            return parts.map((part, index) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                    return (
-                        <strong key={index}>
-                            {part.slice(2, -2)}
-                        </strong>
-                    );
-                }
-                return part;
-            });
-        };
-
         return (
             <div
                 className={`group flex items-end gap-0.5 px-0.5 ${isUser ? 'justify-end' : 'justify-start'}`}
@@ -894,163 +916,74 @@ const Chat = () => {
                         {message.type === 'system' ? (
                             <IconComponents.System className="w-4 h-4 text-white" />
                         ) : (
-                            <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+                            <IconComponents.Assistant className="w-4 h-4 text-white" />
                         )}
                     </div>
                 )}
 
-                <div
-                    className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-0 ${
-                        message.type === 'user' ? 'ml-auto' : ''
-                    }`}
-                >
-                    <div
-                        className={`px-2.5 py-1.5 ${
-                            message.type === 'user'
-                                ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
-                                : message.type === 'system'
-                                  ? 'bg-slate-600/50 text-slate-200 rounded-2xl mx-auto'
-                                  : 'bg-slate-700/50 backdrop-blur-sm text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl'
-                        }`}
-                    >
+                <div className="flex-grow flex flex-col">
+                    <div className="flex items-start justify-between">
                         {/* Show typing animation only if message is empty and isTyping is true */}
                         {message.content.response === '' && isTyping ? (
                             <TypingAnimation />
                         ) : (
                             <p className="whitespace-pre-wrap text-sm">
-                                {message.type === 'user'
-                                    ? message.content.query
-                                    : formatTextWithBold(message.content.response)}
+                                {message.content.response || message.content}
                             </p>
                         )}
 
-                        {/* Document Preview - Inside the message bubble */}
-                        {message.documents && message.documents.length > 0 && (
-                            <div className="mt-2 border-t border-slate-500/30 pt-2">
-                                {message.documents.map((doc, index) => (
-                                    <DocumentPreview
-                                        key={index}
-                                        document={doc}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {!(message.type === 'user') &&
-                        (message.type === 'system' ||
-                            message.type === 'assistant') && (
-                            <div className="mt-0 space-y-0.5">
-                                {/* Show web sources if they exist */}
-                                {message.isWebSearch && (
-                                    <>
-                                        <div className="flex items-center gap-1 px-1">
-                                            <IconComponents.Globe className="w-3 h-3 text-blue-400" />
-                                            <span className="text-xs font-medium text-blue-400">
-                                                Web References
-                                            </span>
-                                        </div>
-                                        <div className="space-y-0.5">
-                                            {[
-                                                {
-                                                    url: 'https://www.google.com/',
-                                                    title: 'Google Search Results'
-                                                },
-                                                {
-                                                    url: 'https://wikipedia.org/',
-                                                    title: 'Wikipedia Reference'
-                                                },
-                                                {
-                                                    url: 'https://facebook.com/',
-                                                    title: 'Public Information'
-                                                }
-                                            ].map((source, index) => {
-                                                const SiteIcon =
-                                                    IconComponents[
-                                                        getSiteIcon(source.url)
-                                                    ];
-                                                return (
-                                                    <a
-                                                        key={index}
-                                                        href={source.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="block p-1 rounded-lg bg-slate-800/50 border border-slate-700/50 
-                                   hover:bg-slate-700/50 transition-colors"
-                                                    >
-                                                        <div className="flex items-start gap-1">
-                                                            <div className="flex-shrink-0 w-3.5 h-3.5 mt-0.5 text-slate-400">
-                                                                <SiteIcon className="w-full h-full" />
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <h4 className="text-xs text-blue-400 font-medium truncate mb-0">
-                                                                    {source.title ||
-                                                                        'Web Source'}
-                                                                </h4>
-                                                                <p className="text-xs text-slate-400 truncate">
-                                                                    {source.url}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </a>
-                                                );
-                                            })}
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        )}
-
-                    {/* Message Actions */}
-                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {/* Copy button with icon instead of text */}
-                        <button
-                            onClick={handleCopy}
-                            className="p-0.5 text-slate-400 hover:text-white rounded"
-                            title={isCopied ? "Copied!" : "Copy to clipboard"}
-                        >
-                            {isCopied ? (
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 6L9 17l-5-5"></path>
-                                </svg>
-                            ) : (
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
-                            )}
-                        </button>
-                        
-                        {/* Text-to-speech button for assistant messages */}
-                        {message.type === 'assistant' && message.content.response && (
-                            <TextToSpeech 
-                                text={message.content.response} 
-                                language={language}
-                            />
-                        )}
-                        
-                        {/* Create document button for assistant messages */}
-                        {message.type === 'assistant' && message.content.response && (
+                        {/* Action buttons */}
+                        <div className="flex items-center gap-1 ml-2 mt-0.5">
                             <button
-                                onClick={() => {
-                                    navigate('/document-editor', { 
-                                        state: { 
-                                            initialContent: message.content.response,
-                                            initialTitle: message.content.query || 'Chat Response'
-                                        } 
-                                    });
-                                }}
-                                className="p-0.5 text-slate-400 hover:text-white rounded"
-                                title="Create document from this response"
+                                onClick={handleCopy}
+                                className={`p-1 rounded-full ${
+                                    darkMode
+                                        ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-300'
+                                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                                } transition-colors`}
+                                title="Copy to clipboard"
                             >
-                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                                    <path d="M14 2v6h6" />
-                                    <path d="M16 13H8" />
-                                    <path d="M16 17H8" />
-                                </svg>
+                                {isCopied ? (
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M20 6L9 17l-5-5"></path>
+                                    </svg>
+                                ) : (
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                )}
                             </button>
-                        )}
+                            
+                            {/* Text-to-speech button for assistant messages */}
+                            {message.type === 'assistant' && message.content.response && (
+                                <TextToSpeech 
+                                    text={message.content.response} 
+                                    language={language}
+                                />
+                            )}
+                            
+                            {/* Create document button for assistant messages */}
+                            {message.type === 'assistant' && message.content.response && (
+                                <button
+                                    onClick={() => {
+                                        navigate('/document-editor', { 
+                                            state: { 
+                                                initialContent: message.content.response,
+                                                initialTitle: message.content.query || 'Chat Response'
+                                            } 
+                                        });
+                                    }}
+                                    className="p-0.5 text-slate-400 hover:text-white rounded"
+                                    title="Create document from this response"
+                                >
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a3 3 0 0 0-3-3H2z"></path>
+                                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Timestamp */}
@@ -1165,7 +1098,9 @@ const Chat = () => {
                 const documents = [];
 
                 conversation.messages.forEach((msg) => {
-                    documents.push(...msg.documents);
+                    if (msg.documents) {
+                        documents.push(...msg.documents);
+                    }
                 });
 
                 formattedMessages.push({
@@ -1177,15 +1112,16 @@ const Chat = () => {
                     timestamp: new Date()
                 });
             }
+            
             conversation.messages.forEach((msg) => {
                 // First add the user message if it exists
-                if (msg.content.query) {
+                if (msg.content && msg.content.query) {
                     formattedMessages.push({
                         type: 'user',
                         content: {
                             query: msg.content.query
                         },
-                        timestamp: msg.timestamp
+                        timestamp: msg.timestamp || new Date()
                     });
                 }
 
@@ -1197,19 +1133,21 @@ const Chat = () => {
                             response: 'Sources:'
                         },
                         isWebSearch: true,
-                        timestamp: msg.timestamp
+                        timestamp: msg.timestamp || new Date()
                     });
                 }
 
                 // Finally add the assistant response
-                formattedMessages.push({
-                    type: msg.isWebSearch ? 'system' : 'assistant',
-                    content: {
-                        response: msg.content.response
-                    },
-                    isWebSearch: msg.isWebSearch,
-                    timestamp: msg.timestamp
-                });
+                if (msg.content && (msg.content.response || msg.content.message)) {
+                    formattedMessages.push({
+                        type: msg.isWebSearch ? 'system' : 'assistant',
+                        content: {
+                            response: msg.content.response || msg.content.message || ''
+                        },
+                        isWebSearch: msg.isWebSearch,
+                        timestamp: msg.timestamp || new Date()
+                    });
+                }
             });
 
             if (conversation.type === 'document-analysis') {
@@ -1254,8 +1192,9 @@ const Chat = () => {
                 ...prev,
                 {
                     type: 'error',
-                    content:
-                        'Failed to load conversation. Starting a new chat.',
+                    content: {
+                        response: 'Failed to load conversation. Starting a new chat.'
+                    },
                     timestamp: new Date()
                 }
             ]);
@@ -1265,119 +1204,352 @@ const Chat = () => {
         }
     };
 
-    return (
-        <div className="flex h-screen bg-gradient-to-b from-slate-900 to-slate-800">
-            {/* Left Sidebar - Fixed width */}
-            <div className="hidden md:block w-64 flex-shrink-0">
-                <Sidebar
-                    user={user}
-                    onSelectPrompt={handleSelectPrompt}
-                    isTempUser={isTempUser}
-                />
-            </div>
+    // Update the message bubble styles to use solid colors instead of glassmorphism
+    const getMessageBubbleClass = (isUser) => {
+        return isUser
+            ? 'bg-blue-600 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
+            : 'bg-slate-700 text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
+    };
 
-            {/* Main Chat Area - More compact and fixed */}
-            <div
-                className={`flex-1 flex flex-col h-full min-w-0 transition-all duration-300
-                    ${isHistoryOpen ? 'md:mr-72' : 'md:mr-0'}`}
-            >
-                {/* Header - More compact */}
-                <div className="flex items-center h-14 px-4 border-b border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
-                    <div className="flex items-center space-x-4">
-                        {/* Mobile menu button - Made visible */}
-                        <button
-                            onClick={() => setIsMobileMenuOpen(true)}
-                            className="md:hidden p-2 hover:bg-slate-700/50 rounded-lg"
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M4 6h16M4 12h16M4 18h16"
-                                />
-                            </svg>
-                        </button>
+    // Update the quoted message bubble styles
+    const getQuotedMessageBubbleClass = (isUser) => {
+        return isUser
+            ? 'bg-blue-700 text-white ml-auto rounded-tl-2xl rounded-bl-2xl rounded-tr-2xl'
+            : 'bg-slate-700 text-slate-100 mr-auto rounded-tr-2xl rounded-br-2xl rounded-tl-2xl';
+    };
 
-                        <div className="flex items-center space-x-3">
-                            <div
-                                className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 
-                           flex items-center justify-center"
-                            >
-                                <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+    // Add a handleSendMessage function that calls sendMessage
+    const handleSendMessage = () => {
+        if (message.trim()) {
+            sendMessage(message);
+        }
+    };
+
+    // Move the handleFileUpload function before the return statement
+    const handleFileUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file || isIncognito) return;
+
+        try {
+            // Log file details for debugging
+            console.log('File details:', {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                sizeInMB: file.size / (1024 * 1024)
+            });
+
+            // File type validation
+            const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedTypes.includes(fileExt)) {
+                throw new Error(
+                    `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`
+                );
+            }
+
+            // Show a system message that we're uploading
+            setMessages((prev) => [
+                ...prev,
+                {
+                    type: 'system',
+                    content: {
+                        response: `Uploading document: ${file.name}...`
+                    },
+                    timestamp: new Date()
+                }
+            ]);
+
+            const response = await documentsApi.uploadDocument(file, file.name);
+            
+            // Call the existing upload complete handler
+            handleUploadComplete(response);
+            
+            // Reset the file input
+            event.target.value = '';
+            
+        } catch (error) {
+            console.error('Failed to upload document:', error);
+            let errorMessage = error.message;
+
+            // Handle specific error cases
+            if (error.status === 413) {
+                errorMessage = 'File size too large. Please try a smaller file.';
+            } else if (error.status === 415) {
+                errorMessage = 'Invalid file type. Please try another format.';
+            }
+
+            // Show error message
+            setMessages((prev) => [
+                ...prev,
+                {
+                    type: 'error',
+                    content: {
+                        response: errorMessage || 'Failed to upload document. Please try again.'
+                    },
+                    timestamp: new Date()
+                }
+            ]);
+        }
+    };
+
+    // Update the renderChatContainer function for a more compact UI with better fonts
+    const renderChatContainer = () => {
+        return (
+            <div className="flex-1 flex flex-col h-full overflow-hidden">
+                {/* Chat messages container */}
+                <div 
+                    className={`flex-1 overflow-y-auto px-3 py-4 space-y-4 ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}
+                    style={{ paddingBottom: '80px' }}
+                >
+                    {messages.length === 0 ? (
+                        <div className="h-full flex items-center justify-center">
+                            <div className="text-center max-w-md mx-auto px-4">
+                                <div className={`w-14 h-14 mx-auto mb-3 rounded-full ${darkMode ? 'bg-blue-600/20' : 'bg-blue-100'} flex items-center justify-center`}>
+                                    <svg
+                                        className={`w-7 h-7 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth={2}
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                                    />
+                                </svg>
                             </div>
-                            <div className="hidden sm:block">
-                                <h1 className="text-base font-semibold text-white leading-none">
-                                    Legal Assistant
-                                </h1>
-                                <p className="text-xs text-slate-400 mt-0.5">
-                                    AI-powered legal research
-                                </p>
+                            <h2 className={`text-xl font-semibold mb-2 tracking-tight ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                                Hello Murewa Ajala!
+                            </h2>
+                            <p className={`${darkMode ? 'text-slate-300' : 'text-gray-600'} mb-5 text-sm`}>
+                                How can I help you with your legal questions today?
+                            </p>
+                            <div className="space-y-2">
+                                {['What are my rights in a criminal case?', 'Help with tenant rights', 'How do I file for divorce?'].map((suggestion, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => {
+                                            setMessage(suggestion);
+                                            setTimeout(() => {
+                                                if (inputRef.current) {
+                                                    inputRef.current.focus();
+                                                }
+                                            }, 100);
+                                        }}
+                                        className={`w-full py-2.5 px-3 rounded-lg text-left text-sm ${
+                                            darkMode 
+                                                ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700' 
+                                                : 'bg-white hover:bg-gray-50 text-gray-700 border border-gray-200'
+                                        } transition-colors`}
+                                    >
+                                        {suggestion}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        messages.map((msg, index) => (
+                            <div
+                                key={index}
+                                className={`group flex items-end gap-0.5 px-0.5 ${msg.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                            >
+                                {/* Assistant/System Avatar - Adjusted size */}
+                                {(msg.type === 'assistant' ||
+                                    msg.type === 'system') && (
+                                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center mb-0">
+                                        {msg.type === 'system' ? (
+                                            <IconComponents.System className="w-4 h-4 text-white" />
+                                        ) : (
+                                            <IconComponents.MessageCircle className="w-4 h-4 text-white" />
+                                        )}
+                                    </div>
+                                )}
 
-                    {/* Right side controls - Updated for mobile */}
-                    <div className="flex-1 flex justify-end items-center space-x-2">
-                        {/* Document List Button */}
-                        <button
-                            onClick={() => navigate('/documents')}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            title="My Documents"
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                                <path d="M14 2v6h6" />
-                                <path d="M16 13H8" />
-                                <path d="M16 17H8" />
-                                <path d="M10 9H8" />
-                            </svg>
-                        </button>
-                        
-                        {/* Document Editor Button */}
-                        <button
-                            onClick={() => navigate('/document-editor')}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            title="AI Document Editor"
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            >
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                        </button>
-                        
-                        {/* Language Dropdown in Header */}
-                        <div className="relative">
-                            <button
-                                id="language-dropdown-button"
-                                onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
-                                className="flex items-center gap-1 p-2 hover:bg-slate-700/50 rounded-lg transition-colors text-slate-300"
-                                title="Select language"
-                            >
-                                <span className="hidden sm:inline text-xs font-medium">{language.split('-')[0].toUpperCase()}</span>
+                                <div
+                                    className={`flex flex-col max-w-[75%] md:max-w-[65%] space-y-0 ${
+                                        msg.type === 'user'
+                                            ? 'ml-auto'
+                                            : ''
+                                    }`}
+                                >
+                                    <div
+                                        className={`px-2.5 py-1.5 ${getMessageBubbleClass(msg.type === 'user')}`}
+                                    >
+                                        {/* Show typing animation only if message is empty and isTyping is true */}
+                                        {msg.content.response === '' && isTyping ? (
+                                            <TypingAnimation />
+                                        ) : (
+                                            <p className="whitespace-pre-wrap text-sm">
+                                                {msg.type === 'user'
+                                                    ? msg.content.query
+                                                    : formatTextWithBold(msg.content.response)}
+                                            </p>
+                                        )}
+
+                                        {/* Document Preview - Inside the message bubble */}
+                                        {msg.documents && msg.documents.length > 0 && (
+                                            <div className="mt-2 border-t border-slate-500/30 pt-2">
+                                                {msg.documents.map((doc, index) => (
+                                                    <DocumentPreview
+                                                        key={index}
+                                                        document={doc}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {!(msg.type === 'user') &&
+                                        (msg.type === 'system' ||
+                                            msg.type === 'assistant') && (
+                                            <div className="mt-0 space-y-0.5">
+                                                {/* Show web sources if they exist */}
+                                                {msg.isWebSearch && (
+                                                    <>
+                                                        <div className="flex items-center gap-1 px-1">
+                                                            <IconComponents.Globe className="w-3 h-3 text-blue-400" />
+                                                            <span className="text-xs font-medium text-blue-400">
+                                                                Web References
+                                                            </span>
+                                                        </div>
+                                                        <div className="space-y-0.5">
+                                                            {[
+                                                                {
+                                                                    url: 'https://www.google.com/',
+                                                                    title: 'Google Search Results'
+                                                                },
+                                                                {
+                                                                    url: 'https://wikipedia.org/',
+                                                                    title: 'Wikipedia Reference'
+                                                                },
+                                                                {
+                                                                    url: 'https://facebook.com/',
+                                                                    title: 'Public Information'
+                                                                }
+                                                            ].map((source, index) => {
+                                                                const SiteIcon =
+                                                                    IconComponents[
+                                                                        getSiteIcon(source.url)
+                                                                    ];
+                                                                return (
+                                                                    <a
+                                                                        key={index}
+                                                                        href={source.url}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="block p-1 rounded-lg bg-slate-800/50 border border-slate-700/50 
+                                                               hover:bg-slate-700/50 transition-colors"
+                                                                    >
+                                                                        <div className="flex items-start gap-1">
+                                                                            <div className="flex-shrink-0 w-3.5 h-3.5 mt-0.5 text-slate-400">
+                                                                                <SiteIcon className="w-full h-full" />
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <h4 className="text-xs text-blue-400 font-medium truncate mb-0">
+                                                                                    {source.title ||
+                                                                                        'Web Source'}
+                                                                                </h4>
+                                                                                <p className="text-xs text-slate-400 truncate">
+                                                                                    {source.url}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </a>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+
+                                    {/* Message Actions */}
+                                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Copy button with icon instead of text */}
+                                        <button
+                                            onClick={() => handleCopy(msg.content.response)}
+                                            className={`p-1 rounded-full ${
+                                                darkMode
+                                                    ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-300'
+                                                    : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                                            } transition-colors`}
+                                            title={copiedMessageId === msg.content.response ? "Copied!" : "Copy to clipboard"}
+                                        >
+                                            {copiedMessageId === msg.content.response ? (
+                                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M20 6L9 17l-5-5"></path>
+                                                </svg>
+                                            ) : (
+                                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                </svg>
+                                            )}
+                                        </button>
+                                        
+                                        {/* Text-to-speech button for assistant messages */}
+                                        {msg.type === 'assistant' && msg.content.response && (
+                                            <TextToSpeech 
+                                                text={msg.content.response} 
+                                                language={language}
+                                            />
+                                        )}
+                                        
+                                        {/* Create document button for assistant messages */}
+                                        {msg.type === 'assistant' && msg.content.response && (
+                                            <button
+                                                onClick={() => {
+                                                    setShowDocumentCreator(true);
+                                                    setDocumentContent(msg.content.response);
+                                                }}
+                                                className={`p-1 rounded-full ${
+                                                    darkMode
+                                                        ? 'hover:bg-slate-700 text-slate-400 hover:text-slate-300'
+                                                        : 'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                                                } transition-colors`}
+                                                title="Create document from this response"
+                                            >
+                                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a3 3 0 0 0-3-3H2z"></path>
+                                                    <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Timestamp */}
+                                    <div
+                                        className={`flex items-center gap-0.5 text-xs text-slate-400 ${
+                                            darkMode ? 'text-slate-500' : 'text-gray-400'
+                                        } mt-1 opacity-0 group-hover:opacity-100 transition-opacity`}
+                                    >
+                                        <span className="opacity-60">
+                                            {new Date(msg.timestamp).toLocaleTimeString(
+                                                [],
+                                                {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* User Avatar - Also adjusted size for consistency */}
+                                {msg.type === 'user' && (
+                                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center mb-0">
+                                        <IconComponents.User className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                    {isTyping && (
+                        <div className="flex justify-start">
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex-shrink-0 mr-2 mt-1 flex items-center justify-center">
                                 <svg
-                                    className="w-4 h-4 text-slate-400"
+                                    className="w-3.5 h-3.5 text-white"
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     stroke="currentColor"
@@ -1385,473 +1557,318 @@ const Chat = () => {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                 >
-                                    <path d="M5 8l6 6 6-6" />
-                                    <path d="M4 21h16" />
-                                    <path d="M9 3h6" />
-                                    <path d="M12 3v18" />
+                                    <path d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
                                 </svg>
-                            </button>
-                            
-                            {isLanguageDropdownOpen && (
-                                <div className="language-dropdown-menu absolute right-0 mt-1 w-48 bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm z-50">
-                                    <div className="p-2 space-y-1">
-                                        {[
-                                            { code: 'en-US', name: 'English (US)' },
-                                            { code: 'es-ES', name: 'Español' },
-                                            { code: 'fr-FR', name: 'Français' },
-                                            { code: 'de-DE', name: 'Deutsch' },
-                                            { code: 'it-IT', name: 'Italiano' },
-                                            { code: 'pt-BR', name: 'Português' },
-                                            { code: 'zh-CN', name: '中文' },
-                                            { code: 'ja-JP', name: '日本語' },
-                                            { code: 'ko-KR', name: '한국어' },
-                                            { code: 'ru-RU', name: 'Русский' }
-                                        ].map((lang) => (
-                                            <button
-                                                key={lang.code}
-                                                onClick={() => {
-                                                    handleLanguageChange(lang.code);
-                                                    setIsLanguageDropdownOpen(false);
-                                                }}
-                                                className={`w-full text-left px-3 py-1.5 rounded-md text-sm ${
-                                                    language === lang.code
-                                                        ? 'bg-blue-600/20 text-blue-400'
-                                                        : 'text-slate-300 hover:bg-slate-700/50'
-                                                }`}
-                                            >
-                                                {lang.name}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <button
-                            onClick={toggleHistory}
-                            className="p-2 hover:bg-slate-700/50 rounded-lg transition-colors"
-                            title={isHistoryOpen ? 'Hide history' : 'Show history'}
-                        >
-                            <svg
-                                className="w-5 h-5 text-slate-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d={isHistoryOpen ? 'M19 9l-7 7-7-7' : 'M19 9l-7 7-7-7'}
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Messages Container - Updated padding and spacing */}
-                <div className="flex-1 overflow-y-auto bg-slate-900">
-                    <div className="max-w-3xl mx-auto py-0.5 space-y-0.5">
-                        {messages.map((message, index) => (
-                            <MessageBubble key={index} message={message} />
-                        ))}
-                        {isTyping && (
-                            <div className="flex items-start gap-0.5 px-0.5">
-                                <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center">
-                                    <IconComponents.MessageCircle className="w-4 h-4 text-white" />
-                                </div>
-                                <div className="rounded-2xl bg-slate-700/50 backdrop-blur-sm px-3 py-2 max-w-[75%] md:max-w-[65%]">
-                                    <TypingAnimation />
-                                </div>
                             </div>
-                        )}
-                        <div ref={chatContainerRef} />
-                    </div>
-                </div>
+                            <div className={`max-w-[85%] md:max-w-[75%] rounded-lg p-3 rounded-tl-none ${
+                                darkMode ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
+                            } shadow-sm`}>
+                                <TypingAnimation />
+                            </div>
+                        </div>
+                    )}
+                    <div ref={chatContainerRef} />
+                </div>,  {/* Add comma here */}
 
-                {/* Input Area - Adjusted padding bottom */}
-                <div className="border-t border-slate-700/50 bg-slate-800/95 backdrop-blur-sm pb-3 md:pb-0">
-                    <div className="max-w-2xl mx-auto p-3">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="relative space-y-1"
-                        >
-                            <div className="relative mb-2">
+                {/* Input area */}
+                <div className={`border-t ${darkMode ? 'border-slate-700/50 bg-slate-800' : 'border-gray-200 bg-white'} p-3 relative`}>
+                    <div className="max-w-3xl mx-auto">
+                        <div className="flex items-center space-x-1.5">
+                            {/* Feature toggles */}
+                            <div className="flex space-x-1">
+                                {/* Web search toggle */}
+                                <button
+                                    onClick={() => setIsWebMode(!isWebMode)}
+                                    className={`p-1.5 rounded-full transition-colors ${
+                                        isWebMode 
+                                            ? (darkMode ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-100 text-blue-600') 
+                                            : (darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-gray-500 hover:text-gray-700')
+                                    }`}
+                                    title={isWebMode ? "Web search enabled" : "Enable web search"}
+                                >
+                                    <IconComponents.Globe className="w-4 h-4" />
+                                </button>
+                                
+                                {/* Detailed reasoning toggle */}
+                                <button
+                                    onClick={() => setIsDetailedMode(!isDetailedMode)}
+                                    className={`p-1.5 rounded-full transition-colors ${
+                                        isDetailedMode 
+                                            ? (darkMode ? 'bg-purple-500/20 text-purple-400' : 'bg-purple-100 text-purple-600') 
+                                            : (darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-gray-500 hover:text-gray-700')
+                                    }`}
+                                    title={isDetailedMode ? "Detailed reasoning enabled" : "Enable detailed reasoning"}
+                                >
+                                    <svg
+                                        className="w-4 h-4"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            {/* Text input */}
+                            <div className="flex-1 relative">
                                 <textarea
                                     ref={inputRef}
                                     value={message}
-                                    onChange={handleMessageChange}
+                                    onChange={(e) => setMessage(e.target.value)}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
-                                            handleSubmit(e);
-                                            // Reset height after sending
-                                            e.target.style.height = '38px';
+                                            handleSendMessage();
                                         }
                                     }}
-                                    placeholder={
-                                        isTempUser
-                                            ? 'Register to chat...'
-                                            : isWebMode
-                                              ? 'Search the web for legal information...'
-                                              : 'Ask any legal question...'
-                                    }
-                                    className={`w-full rounded-lg pl-3 pr-20 py-1.5 
-                            bg-slate-700/50 border text-white placeholder-slate-400 
-                            text-sm resize-none overflow-hidden leading-normal 
-                            transition-all duration-200
-                            ${
-                                isWebMode
-                                    ? 'border-blue-500/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
-                                    : 'border-slate-600/50 focus:border-slate-500 focus:ring-2 focus:ring-slate-500/20'
-                            }`}
-                                    disabled={isTyping || isTempUser}
-                                    rows="1"
-                                    style={{ height: '38px' }} // Reduced default height
+                                    placeholder="Type your message..."
+                                    className={`w-full ${
+                                        darkMode 
+                                            ? 'bg-slate-700 text-white focus:ring-blue-500' 
+                                            : 'bg-gray-100 text-gray-900 focus:ring-blue-500'
+                                    } rounded-full pl-3 pr-10 py-2 focus:outline-none focus:ring-1 resize-none text-sm font-medium`}
+                                    rows={1}
+                                    style={{
+                                        minHeight: '40px',
+                                        maxHeight: '120px'
+                                    }}
                                 />
-
-                                {/* Action buttons container with adjusted spacing */}
-                                <div className="absolute right-2 top-0 h-full flex items-center gap-1">
-                                    <div className="relative">
-                                        {/* Tools Menu Button */}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setIsToolsOpen(!isToolsOpen)
-                                            }
-                                            className={`p-1 rounded-lg transition-all duration-200 flex items-center justify-center
-                                ${isToolsOpen ? 'bg-slate-700/50 text-white' : 'text-slate-400 hover:text-white'}`}
-                                            title="Show tools"
-                                        >
-                                            <IconComponents.Tools className="w-4 h-4" />
-                                        </button>
-
-                                        {/* Expandable Tools Menu */}
-                                        <div
-                                            className={`absolute bottom-full right-0 mb-2 transition-all duration-200 transform
-                                    ${isToolsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}
-                                    bg-slate-800 rounded-lg shadow-lg border border-slate-700/50 backdrop-blur-sm`}
-                                        >
-                                            <div className="p-2 flex flex-col gap-2">
-                                                <div className="flex items-center gap-2">
-                                                    <VoiceChat
-                                                        onVoiceInput={
-                                                            handleVoiceInput
-                                                        }
-                                                        disabled={
-                                                            isTyping || isTempUser
-                                                        }
-                                                        onSubmit={sendMessage}
-                                                    />
-                                                    <VoiceToVoice
-                                                        onVoiceInput={
-                                                            handleVoiceInput
-                                                        }
-                                                        disabled={
-                                                            isTyping || isTempUser
-                                                        }
-                                                        onSubmit={sendMessage}
-                                                        language={language}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            if (!isWebMode) {
-                                                                setDocumentAnalysisId(
-                                                                    null
-                                                                );
-                                                                setIsDocumentAnalysis(
-                                                                    false
-                                                                );
-                                                            }
-                                                            setIsWebMode(
-                                                                !isWebMode
-                                                            );
-                                                        }}
-                                                        className={`p-1.5 md:p-2 rounded-lg transition-all duration-200
-                                    ${
-                                        isWebMode
-                                            ? 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/50'
-                                            : 'text-slate-400 hover:text-white'
-                                    }`}
-                                                        disabled={isTempUser}
-                                                        title={
-                                                            isWebMode
-                                                                ? 'Web search enabled'
-                                                                : 'Enable web search'
-                                                        }
-                                                    >
-                                                        <IconComponents.Globe className="w-4 h-4 md:w-5 md:h-5" />
-                                                    </button>
-                                                    <DocumentUploader
-                                                        onDocumentSelect={
-                                                            handleDocumentSelect
-                                                        }
-                                                        onUploadComplete={
-                                                            handleUploadComplete
-                                                        }
-                                                        className="w-6 h-6 md:w-8 md:h-8 p-1 md:p-1.5"
-                                                        disabled={isTempUser}
-                                                    />
-                                                </div>
-                                                <div className="border-t border-slate-700/50 pt-2 flex items-center gap-2">
-                                                    <ReasoningModeToggle
-                                                        isDetailed={isDetailedMode}
-                                                        onChange={handleDetailedModeToggle}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleTextToSpeechToggle}
-                                                        className={`p-1.5 md:p-2 rounded-lg transition-all duration-200 ${
-                                                            isTextToSpeechEnabled
-                                                                ? 'text-blue-400 bg-blue-500/20 ring-1 ring-blue-500/50'
-                                                                : 'text-slate-400 hover:text-white'
-                                                        }`}
-                                                        title={isTextToSpeechEnabled ? 'Disable text-to-speech' : 'Enable text-to-speech'}
-                                                    >
-                                                        <svg
-                                                            className="w-4 h-4 md:w-5 md:h-5"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2"
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                        >
-                                                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                                                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                                                        </svg>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setShowDocumentCreator(true)}
-                                                        className="p-1.5 md:p-2 rounded-lg text-slate-400 hover:text-white"
-                                                        title="Create new document"
-                                                    >
-                                                        <svg
-                                                            className="w-4 h-4 md:w-5 md:h-5"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            strokeWidth="2"
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                        >
-                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                                            <polyline points="14 2 14 8 20 8" />
-                                                            <line x1="12" y1="18" x2="12" y2="12" />
-                                                            <line x1="9" y1="15" x2="15" y2="15" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Send Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            isTyping ||
-                                            !message.trim() ||
-                                            isTempUser
-                                        }
-                                        className="p-1.5 rounded-lg transition-colors flex items-center justify-center
-                              text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        <IconComponents.Send className="w-4 h-4" />
-                                    </button>
-                                </div>
-
-                                {/* Web Search Indicator - Update positioning */}
-                                {isWebMode && !isDetailedMode && (
-                                    <div
-                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
-                                  transform transition-all duration-300 ease-in-out opacity-100"
-                                    >
-                                        <IconComponents.Globe className="w-3 h-3" />
-                                        <span className="flex items-center gap-1">
-                                            Web search enabled
-                                            <span
-                                                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] 
-                                      bg-blue-500/10 border border-blue-500/20 text-blue-400"
-                                            >
-                                                beta
-                                            </span>
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {/* Detailed Reasoning Mode Indicator */}
-                                {isDetailedMode && !isWebMode && (
-                                    <div
-                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-purple-400/90
-                                  transform transition-all duration-300 ease-in-out opacity-100"
-                                    >
-                                        <svg
-                                            className="w-3 h-3"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                        >
-                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-                                        </svg>
-                                        <span className="flex items-center gap-1">
-                                            Detailed reasoning enabled
-                                        </span>
-                                    </div>
-                                )}
-                                
-                                {/* Combined Indicators when both are enabled */}
-                                {isDetailedMode && isWebMode && (
-                                    <div
-                                        className="absolute -bottom-5 left-0 flex items-center gap-1.5 text-xs text-blue-400/90
-                                  transform transition-all duration-300 ease-in-out opacity-100"
-                                    >
-                                        <div className="flex items-center gap-1.5">
-                                            <IconComponents.Globe className="w-3 h-3" />
-                                            <span className="flex items-center gap-1">
-                                                Web search with detailed reasoning
-                                                <span
-                                                    className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] 
-                                          bg-blue-500/10 border border-blue-500/20 text-blue-400"
-                                                >
-                                                    beta
-                                                </span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
+                                <button
+                                    onClick={handleSendMessage}
+                                    disabled={!message.trim() || isTyping}
+                                    className={`absolute right-1.5 top-1/2 transform -translate-y-1/2 p-1.5 rounded-full ${
+                                        !message.trim() || isTyping
+                                            ? (darkMode ? 'text-slate-500 cursor-not-allowed' : 'text-gray-400 cursor-not-allowed')
+                                            : (darkMode ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-blue-500 text-white hover:bg-blue-600')
+                                    } transition-colors`}
+                                >
+                                    <IconComponents.Send className="w-3.5 h-3.5" />
+                                </button>
                             </div>
-                        </form>
+                            
+                            {/* Tools button */}
+                            <button
+                                onClick={() => setIsToolsOpen(!isToolsOpen)}
+                                className={`p-1.5 rounded-full ${
+                                    darkMode ? 'text-slate-400 hover:text-slate-300 hover:bg-slate-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                } transition-colors`}
+                                title="Tools"
+                            >
+                                <IconComponents.Tools className="w-4 h-4" />
+                            </button>
+                            
+                            {/* History toggle button (visible on mobile) */}
+                            <button
+                                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                className={`p-1.5 rounded-full md:hidden ${
+                                    darkMode ? 'text-slate-400 hover:text-slate-300 hover:bg-slate-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                                } transition-colors`}
+                                title="Chat History"
+                            >
+                                <svg
+                                    className="w-4 h-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </button>
+                        </div>
+                        
+                        {/* Mode indicators */}
+                        <div className="flex items-center mt-1.5 text-xs space-x-3 justify-center">
+                            {isWebMode && (
+                                <div className="flex items-center">
+                                    <span className={`w-1.5 h-1.5 bg-blue-400 rounded-full mr-1`}></span>
+                                    <span className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} font-medium text-xs`}>
+                                        Web Search
+                                    </span>
+                                </div>
+                            )}
+                            {isDetailedMode && (
+                                <div className="flex items-center">
+                                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full mr-1"></span>
+                                    <span className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} font-medium text-xs`}>
+                                        Detailed
+                                    </span>
+                                </div>
+                            )}
+                            {isVoiceMode && (
+                                <div className="flex items-center">
+                                    <span className="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></span>
+                                    <span className={`${darkMode ? 'text-slate-400' : 'text-gray-500'} font-medium text-xs`}>
+                                        Voice
+                                    </span>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
+        );
+    };
 
-            {/* Update the ChatHistory wrapper div */}
-            <div
-                ref={historyRef}
-                className={`
-          fixed inset-y-0 right-0 
-          md:block 
-          transition-transform duration-300 ease-in-out
-          ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'}
-          ${isMobile() ? 'w-full md:w-72' : 'hidden w-72'}
-          z-50
-        `}
-            >
-                <ChatHistory
-                    conversations={conversations}
-                    onSelectChat={handleSelectChat}
-                    onDeleteChat={handleDeleteChat}
-                    onEditTitle={handleEditTitle}
-                    onNewChat={handleNewChat}
-                    isOpen={isHistoryOpen}
-                    currentconversationId={currentconversationId}
-                    onClose={toggleHistory}
+    const handleCopy = async (messageContent) => {
+        try {
+            if (!messageContent) return;
+            await navigator.clipboard.writeText(messageContent);
+            setCopiedMessageId(messageContent);
+            setTimeout(() => setCopiedMessageId(null), 2000);
+        } catch (err) {
+            console.error('Failed to copy:', err);
+        }
+    };
+
+    return (
+        <div className={`flex h-screen ${darkMode ? 'bg-slate-900 text-slate-200' : 'bg-gray-50 text-gray-800'}`}>
+            {/* Sidebar - hidden on mobile, visible on desktop */}
+            <div className="hidden md:block">
+                <Sidebar 
+                    user={user} 
+                    onSelectPrompt={handleSelectPrompt} 
+                    darkMode={darkMode} 
+                    toggleDarkMode={toggleDarkMode}
+                    isOpen={true}
+                    onClose={() => {}}
                 />
             </div>
-
-            {/* Document Creator Modal */}
-            {showDocumentCreator && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <DocumentCreator
-                        onDocumentCreate={handleDocumentCreate}
-                        onCancel={() => setShowDocumentCreator(false)}
-                    />
-                </div>
-            )}
-
-            {/* Mobile Navigation */}
-            <MobileNav
-                user={user}
-                onSelectPrompt={handleSelectPrompt}
-                isTempUser={isTempUser}
+            
+            {/* Mobile Sidebar - only visible when toggled */}
+            <Sidebar 
+                user={user} 
+                onSelectPrompt={handleSelectPrompt} 
+                darkMode={darkMode} 
+                toggleDarkMode={toggleDarkMode}
                 isOpen={isMobileMenuOpen}
                 onClose={() => setIsMobileMenuOpen(false)}
+                className="md:hidden"
             />
-
-            {/* Mobile Bottom Bar - Added top border and spacing */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50">
-                <div className="flex items-center justify-around p-3">
-                    <button
-                        onClick={handleNewChat}
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 4v16m8-8H4"
-                            />
-                        </svg>
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            if (!isWebMode) {
-                                setDocumentAnalysisId(null);
-                                setIsDocumentAnalysis(false);
-                            }
-                            setIsWebMode(!isWebMode);
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${
-                            isWebMode ? 'text-blue-400' : 'text-slate-400'
-                        }`}
-                    >
-                        <IconComponents.Globe className="w-5 h-5" />
-                    </button>
-
-                    <button
-                        onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                        className={`p-2 rounded-lg transition-colors ${
-                            isHistoryOpen ? 'text-blue-400' : 'text-slate-400'
-                        }`}
-                    >
-                        <svg
-                            className="w-5 h-5"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M4 6h16M4 12h16M4 18h7"
-                            />
-                        </svg>
-                    </button>
-
+            
+            {/* Main content area */}
+            <div className="flex-1 flex flex-col h-screen relative overflow-hidden">
+                {/* Mobile top navigation - only visible on mobile */}
+                <div className={`flex items-center justify-between p-2 ${darkMode ? 'border-b border-slate-700/50' : 'border-b border-gray-200'} md:hidden`}>
                     <button
                         onClick={() => setIsMobileMenuOpen(true)}
-                        className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-700/50"
+                        className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-200'} transition-colors`}
                     >
                         <svg
-                            className="w-5 h-5"
+                            className={`w-4 h-4 ${darkMode ? 'text-slate-300' : 'text-gray-600'}`}
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-                            />
+                            <path d="M4 6h16M4 12h16M4 18h7" />
                         </svg>
                     </button>
+                    <h1 className="text-sm font-medium">AI Assistant</h1>
+                    <button
+                        onClick={toggleDarkMode}
+                        className={`p-1.5 rounded-lg ${darkMode ? 'hover:bg-slate-700/50' : 'hover:bg-gray-200'} transition-colors`}
+                    >
+                        {darkMode ? (
+                            <FiSun className={`w-4 h-4 ${darkMode ? 'text-slate-300' : 'text-gray-600'}`} />
+                        ) : (
+                            <FiMoon className={`w-4 h-4 ${darkMode ? 'text-slate-300' : 'text-gray-600'}`} />
+                        )}
+                    </button>
+                </div>
+                
+                {/* Main content with chat and history */}
+                <div className="flex flex-1 overflow-hidden relative">
+                    {/* Main chat area */}
+                    <div className="flex-1 flex flex-col h-full overflow-hidden">
+                        {isVoiceMode ? (
+                            <VoiceChat
+                                onVoiceInput={handleVoiceInput}
+                                onSendMessage={handleSendMessage}
+                                isTyping={isTyping}
+                                messages={messages}
+                                chatContainerRef={chatContainerRef}
+                                darkMode={darkMode}
+                            />
+                        ) : (
+                            renderChatContainer()
+                        )}
+                    </div>
+                    
+                    {/* Chat history sidebar */}
+                    <div
+                        ref={historyRef}
+                        className={`${
+                            isHistoryOpen
+                                ? 'translate-x-0 opacity-100'
+                                : 'translate-x-full opacity-0 md:translate-x-0 md:opacity-100'
+                        } transition-all duration-300 w-full md:w-64 absolute md:relative right-0 z-20 h-full ${
+                            darkMode ? 'bg-slate-800 border-l border-slate-700/50' : 'bg-white border-l border-gray-200'
+                        } overflow-hidden flex flex-col`}
+                    >
+                        <ChatHistory
+                            conversations={conversations}
+                            onSelectChat={handleSelectChat}
+                            onNewChat={handleNewChat} 
+                            onDeleteChat={handleDeleteConversation}
+                            onEditTitle={handleEditTitle}
+                            currentConversationId={currentconversationId}
+                            onClose={() => setIsHistoryOpen(false)}
+                            darkMode={darkMode}
+                        />
+                    </div>
+                </div>
+                
+                {/* Mobile bottom navigation - only visible on mobile */}
+                <div className="md:hidden">
+                    <MobileBottomBar
+                        darkMode={darkMode}
+                        onDarkModeToggle={toggleDarkMode}
+                        onNewChat={handleNewChat}
+                        onHistoryToggle={() => setIsHistoryOpen(!isHistoryOpen)}
+                        onMenuToggle={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        onWebToggle={() => setIsWebMode(!isWebMode)}
+                        onVoiceToggle={() => setIsVoiceMode(!isVoiceMode)}
+                        isWebMode={isWebMode}
+                        isVoiceMode={isVoiceMode}
+                    />
+                </div>
+                
+                {/* Mobile menu - only visible when open */}
+                <MobileNav
+                    darkMode={darkMode}
+                    user={user}
+                    onSelectPrompt={handleSelectPrompt}
+                    isTempUser={isTempUser}
+                    isOpen={isMobileMenuOpen}
+                    onClose={() => setIsMobileMenuOpen(false)}
+                />
+                
+                {/* Tools panel */}
+                <div className={`fixed bottom-16 md:bottom-4 right-4 z-10 ${isToolsOpen ? 'block' : 'hidden'}`}>
+                    <div className={`p-2 rounded-lg shadow-lg ${darkMode ? 'bg-slate-800 border border-slate-700' : 'bg-white border border-gray-200'}`}>
+                        <div className="mb-1">
+                            <p className={`text-xs font-medium ${darkMode ? 'text-slate-400' : 'text-gray-500'}`}>Upload Document</p>
+                        </div>
+                        <label className={`flex items-center justify-center px-2 py-1.5 rounded-md cursor-pointer text-xs ${
+                            darkMode 
+                                ? 'bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 border border-blue-600/20' 
+                                : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-200'
+                        }`}>
+                            <FiFileText className="mr-1.5 w-3.5 h-3.5" />
+                            <span>Choose File</span>
+                            <input type="file" className="hidden" onChange={handleFileUpload} />
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>
