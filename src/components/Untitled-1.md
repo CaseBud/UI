@@ -24,7 +24,6 @@ This workspace is a ChatBot application built using React and Vite. Here is a br
         - **services**: Contains authService for handling authentication-related services.
         - **utils**: Contains utility functions like api.js and auth.js.
     - **docs**: Contains documentation files.
-    - **TRials**: Contains trial files like login.jsx and loginwithtoken.jsx.
     - **public**: Contains static assets like index.html and vite.svg.
     - **.gitignore, eslint.config.js, package-lock.json, package.json, postcss.config.js, README.md, tailwind.config.js, vite.config.js**: Configuration files for Git, ESLint, npm packages, PostCSS, Tailwind CSS, and Vite.
 
