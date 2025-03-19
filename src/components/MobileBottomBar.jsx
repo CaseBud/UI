@@ -29,10 +29,10 @@ const MobileBottomBar = ({
     // Add translations for mobile buttons
     const translations = {
         newChat: translate('mobile.newChat', currentLanguage),
-        web: translate('mobile.web', currentLanguage),
+        web: translate('chat.webSearch', currentLanguage),
         upload: translate('document.upload', currentLanguage),
         language: translate('settings.language', currentLanguage),
-        detailed: translate('mobile.detailed', currentLanguage)
+        detailed: translate('chat.detailedMode', currentLanguage)
     };
 
     return (

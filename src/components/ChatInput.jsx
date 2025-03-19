@@ -172,7 +172,7 @@ const ChatInput = ({
                                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <path d="M23 12a11.05 11.05 0 0 0-22 0zm-5 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
                                                 </svg>
-                                                Reasoning Mode
+                                                {translate('chat.detailedMode', currentLanguage) || 'Reasoning Mode'}
                                             </button>
                                             
                                             {/* Voice Chat */}
