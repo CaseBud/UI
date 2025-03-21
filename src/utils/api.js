@@ -95,16 +95,17 @@ export const chatApi = {
     sendMessage: async (message, options = {}) => {
         const { conversationId = null, webSearch = false, language = 'en-US', detailedMode = false } = options;
         
+        if (!message || !message.trim()) {
+            throw new ApiError('Query is required', 400);
+        }
+
         try {
-            const endpoint = '/api/chat';
+            const endpoint = '/api/chat/standard-conversation';
             const response = await fetchWithToken(endpoint, {
                 method: 'POST',
                 body: JSON.stringify({
-                    message,
-                    conversationId,
-                    webSearch,
-                    language,
-                    detailedMode
+                    query: message, // Change 'message' to 'query'
+                    conversationId
                 })
             });
             
@@ -183,17 +184,41 @@ export const chatApi = {
     sendDocumentAnalysis: async (query, documentIds, conversationId = null, language = 'en-US') => {
         try {
             const endpoint = '/api/chat/document-analysis';
+            
+            // Only include documentIds that are valid strings
+            const validDocIds = (documentIds || [])
+                .filter(id => id && typeof id === 'string')
+                .map(id => id.trim());
+            
+            if (!validDocIds.length) {
+                throw new ApiError('No valid documents selected', 400);
+            }
+
+            const requestBody = {
+                query: query.trim(),
+                documentIds: validDocIds
+            };
+
+            // Only include conversationId if it exists
+            if (conversationId) {
+                requestBody.conversationId = conversationId;
+            }
+
             const response = await fetchWithToken(endpoint, {
                 method: 'POST',
-                body: JSON.stringify({
-                    query,
-                    documentIds,
-                    conversationId,
-                    language
-                })
+                body: JSON.stringify(requestBody)
             });
             
-            return response;
+            // Ensure response matches expected format
+            if (!response || (!response.response && !response.message)) {
+                throw new ApiError('Invalid response from server', 500);
+            }
+
+            return {
+                response: response.response || response.message,
+                conversationId: response.conversationId,
+                documents: response.documents || []
+            };
         } catch (error) {
             console.error('Document analysis error:', error);
             throw error;
@@ -201,53 +226,57 @@ export const chatApi = {
     },
 
     sendDocument: async (file) => {
-        // If you don't have an actual upload endpoint, you can simulate success
-        // or use a different endpoint that can process the document content
-        
-        // For now, just return a success response
-        return {
-            success: true,
-            message: "Document processed successfully"
-        };
-        
-        // If you do have an endpoint that can analyze documents without storing them:
-        /*
-        const formData = new FormData();
-        formData.append('document', file);
-        
-        const response = await fetch('https://your-api-endpoint/analyze-document', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${authService.getToken()}`
-            },
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to process document');
+        try {
+            // Create FormData with exact field names matching API spec
+            const formData = new FormData();
+            // 'file' field for the binary data
+            formData.append('file', file, file.name);
+            // 'name' field for the string name
+            formData.append('name', file.name);
+
+            const response = await fetchWithToken('/api/documents', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    Authorization: `Bearer ${getAuthToken()}`
+                }
+            }, true);
+
+            // Handle the successful response
+            if (response?.status === 'success' && response?.data) {
+                return {
+                    success: true,
+                    message: "Document uploaded successfully",
+                    data: {
+                        document: {
+                            _id: response.data._id || response.data.id,
+                            name: file.name,
+                            type: file.type,
+                            size: file.size
+                        }
+                    },
+                    conversationId: response.data.conversationId || null
+                };
+            }
+
+            throw new ApiError('Invalid response format from server', 500);
+        } catch (error) {
+            console.error('Document upload error details:', error);
+            throw new ApiError(
+                error.message || 'Failed to upload document', 
+                error.status || 500
+            );
         }
-        
-        return await response.json();
-        */
     }
-    //this endpoint doesn't even exist 💀
 };
 
 export const documentsApi = {
     uploadDocument: async (file, name) => {
-        // Log request details for debugging
-        console.log('Uploading document:', {
-            fileName: name,
-            fileSize: file.size,
-            fileType: file.type
-        });
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('name', name);
-
         try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('name', name || file.name);
+
             const response = await fetchWithToken(
                 '/api/documents',
                 {
@@ -260,17 +289,20 @@ export const documentsApi = {
                 true
             );
 
-            // Log successful response
-            console.log('Upload response:', response);
-            return response;
+            return {
+                success: true,
+                data: {
+                    document: {
+                        _id: response.documentId || response._id,
+                        name: name || file.name,
+                        type: file.type,
+                        size: file.size
+                    }
+                }
+            };
         } catch (error) {
-            // Log error details
-            console.error('Upload error details:', {
-                status: error.status,
-                message: error.message,
-                response: error.response
-            });
-            throw error;
+            console.error('Upload error details:', error);
+            throw new ApiError('Failed to upload document. Please try again.', error.status || 500);
         }
     },
     

@@ -441,7 +441,8 @@ const Chat = () => {
     };
 
     const handleUploadComplete = (response) => {
-        if (isIncognito) return;
+        if (isIncognito || !response?.data?.document) return;
+        
         const document = response.data.document;
         console.log('Uploaded document details:', {
             id: document._id,
@@ -449,12 +450,10 @@ const Chat = () => {
             type: document.type,
             size: document.size
         });
-
+    
         setUploadedDocuments((prev) => [...prev, document]);
-        setActiveDocuments((prev) => {
-            const newActiveDocuments = [...prev, document._id];
-            return newActiveDocuments;
-        });
+        setActiveDocuments((prev) => [...prev, document._id]);
+        setDocumentAnalysisId(response.conversationId || null);
         
         // Toggle document analysis mode
         setIsDocumentAnalysis(true);
@@ -466,15 +465,13 @@ const Chat = () => {
             {
                 type: 'system',
                 content: {
-                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
+                    response: translate('default.documentUploaded', currentLanguage)
+                        .replace('{name}', document.name)
                 },
                 documents: [document],
                 timestamp: new Date()
             }
         ]);
-        
-        // Close the document uploader modal
-        setShowDocumentCreator(false);
     };
 
     // Ensure document analysis chat sets conversationId to null when starting a new document chat
@@ -559,40 +556,28 @@ const Chat = () => {
 
             let response;
 
-            if (isDocumentAnalysis) {
+            if (isDocumentAnalysis && activeDocuments.length > 0) {
                 try {
-                    localStorage.removeItem('lastConversationId');
-                    localStorage.removeItem('currentChatMessages');
                     response = await chatApi.sendDocumentAnalysis(
                         content.trim(),
-                        activeDocuments.length > 0 ? activeDocuments : null,
+                        activeDocuments,
                         documentAnalysisId,
                         currentLanguage
                     );
 
-                    if (!response) {
-                        throw new Error('No response from document analysis');
-                    }
-                    setActiveDocuments([]); // Clear documents
-                    setDocumentAnalysisId(response.conversationId);
-                    setIsDocumentAnalysis(true);
-
-                    // Update: Don't add empty assistant message here
-                    // Instead, wait for the actual response
                     const assistantMessage = {
                         type: 'assistant',
                         content: {
                             query: content,
-                            response: response.response || response.message
+                            response: response.response
                         },
-                        documents: [],
+                        documents: response.documents || [],
                         timestamp: new Date()
                     };
 
+                    setDocumentAnalysisId(response.conversationId);
                     setMessages((prev) => [...prev, assistantMessage]);
-                    await showResponseGradually(
-                        response.response || response.message
-                    );
+                    await showResponseGradually(response.response);
                 } catch (docError) {
                     console.error('Document analysis error details:', docError);
                     setMessages((prev) => [
@@ -600,8 +585,7 @@ const Chat = () => {
                         {
                             type: 'error',
                             content: {
-                                response:
-                                    'Document analysis failed. Please try again.'
+                                response: docError.message || 'Document analysis failed. Please try again.'
                             },
                             timestamp: new Date()
                         }
@@ -646,10 +630,7 @@ const Chat = () => {
                 setDocumentAnalysisId(null);
                 setIsDocumentAnalysis(false);
                 response = await chatApi.sendMessage(content.trim(), {
-                    conversationId: currentconversationId,
-                    webSearch: isWebMode,
-                    language: currentLanguage,
-                    detailedMode: isDetailedMode
+                    conversationId: currentconversationId
                 });
                 setCurrentconversationId(response.conversationId);
                 if (isWebMode) {
@@ -707,7 +688,11 @@ const Chat = () => {
                 ...prev,
                 {
                     type: 'error',
-                    content: error.message || 'Failed to process your request.',
+                    content: {
+                        response: error.message === 'Query is required' 
+                            ? 'Please enter a message' 
+                            : error.message || 'Failed to process your request.'
+                    },
                     timestamp: new Date()
                 }
             ]);
@@ -716,7 +701,9 @@ const Chat = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        sendMessage(message);
+        if (message.trim()) {
+            sendMessage(message);
+        }
     };
 
     const handleKeyPress = (e) => {
@@ -888,55 +875,35 @@ const Chat = () => {
                     if (!file) return;
                     
                     try {
+                        // Validate file size (10MB limit)
+                        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+                        if (file.size > MAX_FILE_SIZE) {
+                            throw new Error('File size exceeds 10MB limit');
+                        }
+
                         // Show loading state
                         setMessages((prev) => [
                             ...prev,
                             {
                                 type: 'system',
                                 content: {
-                                    response: translate('default.documentUploading', currentLanguage).replace('{name}', file.name)
+                                    response: translate('default.documentUploading', currentLanguage)
+                                        .replace('{name}', file.name)
                                 },
                                 timestamp: new Date()
                             }
                         ]);
                         
-                        // Instead of using documentsApi, use the chatApi to handle the document
                         const response = await chatApi.sendDocument(file);
                         
-                        // Create a document object from the file
-                        const document = {
-                            _id: new Date().getTime().toString(), // Generate a temporary ID
-                            name: file.name,
-                            type: file.type,
-                            size: file.size
-                        };
+                        // Check if we have valid document data
+                        if (response?.success && response?.data?.document?._id) {
+                            handleUploadComplete(response);
+                        } else {
+                            throw new Error('Invalid document data received');
+                        }
                         
-                        // Handle successful upload
-                        setUploadedDocuments((prev) => [...prev, document]);
-                        setActiveDocuments((prev) => {
-                            const newActiveDocuments = [...prev, document._id];
-                            return newActiveDocuments;
-                        });
-                        
-                        // Toggle document analysis mode
-                        setIsDocumentAnalysis(true);
-                        setIsWebMode(false);
-                        
-                        // Add system message about document upload
-                        setMessages((prev) => [
-                            ...prev,
-                            {
-                                type: 'system',
-                                content: {
-                                    response: translate('default.documentUploaded', currentLanguage).replace('{name}', document.name)
-                                },
-                                documents: [document],
-                                timestamp: new Date()
-                            }
-                        ]);
-                        
-                        // Reset the file input
-                        event.target.value = '';
+                        event.target.value = ''; // Reset file input
                     } catch (error) {
                         console.error('Failed to upload document:', error);
                         setMessages((prev) => [
@@ -944,11 +911,13 @@ const Chat = () => {
                             {
                                 type: 'error',
                                 content: {
-                                    response: translate('default.uploadError', currentLanguage).replace('{error}', error.message || 'Unknown error')
+                                    response: translate('default.uploadError', currentLanguage)
+                                        .replace('{error}', error.message || 'Upload failed')
                                 },
                                 timestamp: new Date()
                             }
                         ]);
+                        event.target.value = ''; // Reset file input on error
                     }
                 }}
             />
