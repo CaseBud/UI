@@ -1,5 +1,6 @@
 // Define translations for different languages
 // Structure: { [key]: { [language_code]: translation } }
+//!GENERATED CODE DO NOT TAMPER EDIT OR CHANGE WIWTHOUT PERMISSION
 export const translations = {
     // Common UI elements
     'app.title': {
@@ -183,6 +184,21 @@ export const translations = {
         'yo-NG': 'Ìwọ́n Ìdájọ́',
         'ig-NG': 'Ụdị Ịtụle',
         'ha-NG': 'Yanayin Hujja'
+    },
+    'chat.voiceInput': { // Added new key
+        'en-US': 'Voice Input',
+        'es-ES': 'Entrada de Voz',
+        'fr-FR': 'Entrée Vocale',
+        'de-DE': 'Spracheingabe',
+        'zh-CN': '语音输入',
+        'ja-JP': '音声入力',
+        'ko-KR': '음성 입력',
+        'ar-SA': 'إدخال صوتي',
+        'hi-IN': 'आवाज़ इनपुट',
+        'pt-BR': 'Entrada de Voz',
+        'yo-NG': 'Ìfọ̀rọ̀ Ohùn',
+        'ig-NG': 'Ntinye Olu',
+        'ha-NG': 'Shigar Murya'
     },
     
     // Document related
@@ -602,4 +618,4 @@ export const translate = (key, language = 'en-US') => {
 // Component for easy usage in JSX
 export const T = ({ id, defaultMessage }) => {
     return translate(id, localStorage.getItem('userLanguage') || 'en-US') || defaultMessage || id;
-}; 
+};

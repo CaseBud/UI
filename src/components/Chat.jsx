@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import audioBufferToWav from 'audiobuffer-to-wav';
 import { chatApi } from '../utils/api';
 import { authService } from '../services/authService';
 import Sidebar from './Sidebar';
@@ -21,7 +22,9 @@ import MobileInput from './MobileInput';
 import MobileBottomBar from './MobileBottomBar';
 import { useLanguage } from '../contexts/LanguageContext';
 import { translate } from '../utils/translations';
-
+import { AssemblyAI } from 'assemblyai';
+import useVoiceRecorder from '../useVoiceRecorder'; // Import the new hook
+import { FaMicrophone } from 'react-icons/fa';
 // Replace lucide-react imports with SVG components
 const IconComponents = {
     MessageCircle: (props) => (
@@ -253,6 +256,15 @@ const Chat = () => {
 
     // Create a ref for the file input
     const fileInputRef = useRef(null);
+
+    // Voice recording states
+    const { isRecording, audioBlob, startRecording, stopRecording, setAudioBlob } = useVoiceRecorder();
+    const [transcribing, setTranscribing] = useState(false);
+
+    const client = new AssemblyAI({
+        //!PROCESS ENV ASAP BEFORE OLU EATS ME
+        apiKey: import.meta.env.VITE_ASSEMBLYAI_API_KEY, // Replace with your AssemblyAI API key
+    });
 
     useEffect(() => {
         if (!isIncognito && isHistoryOpen) {
@@ -757,6 +769,70 @@ const Chat = () => {
     // Replace the existing handleNewChat with createNewChat
     const handleNewChat = createNewChat;
 
+   // Handle voice recording and transcription
+   const handleVoiceRecord = async () => {
+    if (!isRecording && !audioBlob) {
+        startRecording();
+    } else if (isRecording) {
+        stopRecording();
+    }
+};
+
+const transcribeAudio = async (blob) => {
+    setTranscribing(true);
+    try {
+        console.log('Original Blob:', { size: blob.size, type: blob.type });
+
+        // Convert WebM to WAV
+        const audioContext = new AudioContext();
+        const arrayBuffer = await blob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const wavBlob = new Blob([audioBufferToWav(audioBuffer)], { type: 'audio/wav' });
+        console.log('Converted WAV Blob:', { size: wavBlob.size, type: wavBlob.type });
+
+        const upload = await client.files.upload(wavBlob);
+        const params = { audio: upload.upload_url };
+        const result = await client.transcripts.transcribe(params);
+        
+        if (result.status === 'completed' && result.text) {
+            setMessage(result.text);
+            sendMessage(result.text);
+        } else {
+            setMessages((prev) => [
+                ...prev,
+                {
+                    type: 'error',
+                    content: { response: 'Transcription failed.' },
+                    timestamp: new Date(),
+                },
+            ]);
+        }
+    } catch (error) {
+        console.error('Transcription error:', error);
+        setMessages((prev) => [
+            ...prev,
+            {
+                type: 'error',
+                content: { response: 'Failed to transcribe audio: ' + error.message },
+                timestamp: new Date(),
+            },
+        ]);
+    }
+    setTranscribing(false);
+};
+   // Effect to trigger transcription when audioBlob is set
+useEffect(() => {
+    if (audioBlob && !isRecording) {
+        transcribeAudio(audioBlob);
+        setAudioBlob(null); // Reset after processing
+    }
+}, [audioBlob, isRecording]);
+
+
+
+
+
+
     const handleVoiceInput = (text) => {
         if (typeof text === 'string') {
             setMessage(text);
@@ -929,16 +1005,13 @@ const Chat = () => {
                 onDocumentUploadClick={handleDocumentUploadClick}
             />
 
-            {/* Main content */}
             <div className="flex-1 flex flex-col">
-                {/* Chat header */}
                 <ChatHeader 
                     onDocumentUploadClick={handleDocumentUploadClick}
                     setIsHistoryOpen={setIsHistoryOpen}
                     isHistoryOpen={isHistoryOpen}
                 />
 
-                {/* Chat history */}
                 <div className="flex-1 overflow-y-auto">
                     <div className="max-w-4xl mx-auto py-3 space-y-2 pb-40 md:pb-4">
                         {messages.map((message, index) => (
@@ -952,14 +1025,11 @@ const Chat = () => {
                         {isTyping && (
                             <div className="flex mb-3">
                                 <div className="flex flex-row max-w-[85%]">
-                                    {/* Avatar */}
                                     <div className={`flex-shrink-0 w-8 h-8 rounded-full ${
                                         isDark ? 'bg-blue-600' : 'bg-blue-500'
                                     } flex items-center justify-center self-start mt-1 mr-2`}>
                                         <IconComponents.MessageCircle className="w-4 h-4 text-white" />
                                     </div>
-                                    
-                                    {/* Message content */}
                                     <div className="flex flex-col">
                                         <div className={`px-3 py-2 rounded-lg ${
                                             isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
@@ -970,35 +1040,47 @@ const Chat = () => {
                                 </div>
                             </div>
                         )}
+                        {transcribing && (
+                            <div className="flex mb-3">
+                                <div className="flex flex-row max-w-[85%]">
+                                    <div className={`px-3 py-2 rounded-lg ${
+                                        isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
+                                    }`}>
+                                        Transcribing...
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                         <div ref={chatContainerRef} />
                     </div>
                 </div>
 
-                {/* Desktop Input area */}
                 <div className="hidden md:block">
-                    <ChatInput 
-                        message={message}
-                        handleMessageChange={handleMessageChange}
-                        handleSubmit={handleSubmit}
-                        isTyping={isTyping}
-                        isTempUser={isTempUser}
-                        isWebMode={isWebMode}
-                        isDetailedMode={isDetailedMode}
-                        isToolsOpen={isToolsOpen}
-                        setIsToolsOpen={setIsToolsOpen}
-                        IconComponents={IconComponents}
-                        handleDetailedModeToggle={handleDetailedModeToggle}
-                        handleTextToSpeechToggle={handleTextToSpeechToggle}
-                        isTextToSpeechEnabled={isTextToSpeechEnabled}
-                        handleDocumentUploadClick={handleDocumentUploadClick}
-                        setIsWebMode={setIsWebMode}
-                        setDocumentAnalysisId={setDocumentAnalysisId}
-                        setIsDocumentAnalysis={setIsDocumentAnalysis}
-                    />
-                </div>
+    <ChatInput 
+        message={message}
+        handleMessageChange={handleMessageChange}
+        handleSubmit={handleSubmit}
+        isTyping={isTyping}
+        isTempUser={isTempUser}
+        isWebMode={isWebMode}
+        isDetailedMode={isDetailedMode}
+        isToolsOpen={isToolsOpen}
+        setIsToolsOpen={setIsToolsOpen}
+        IconComponents={IconComponents}
+        handleDetailedModeToggle={handleDetailedModeToggle}
+        handleTextToSpeechToggle={handleTextToSpeechToggle}
+        isTextToSpeechEnabled={isTextToSpeechEnabled}
+        handleDocumentUploadClick={handleDocumentUploadClick}
+        setIsWebMode={setIsWebMode}
+        setDocumentAnalysisId={setDocumentAnalysisId}
+        setIsDocumentAnalysis={setIsDocumentAnalysis}
+        handleVoiceRecord={handleVoiceRecord} // Correct prop name
+        isRecording={isRecording}
+        transcribing={transcribing}
+    />
+</div>
             </div>
 
-            {/* Chat history sidebar */}
             <div 
                 className={`fixed top-0 right-0 h-full bg-slate-800 border-l border-slate-700/50 overflow-y-auto transition-transform duration-300 ease-in-out ${isHistoryOpen ? 'translate-x-0' : 'translate-x-full'} w-full md:w-72 z-50`}
                 ref={historyRef}
@@ -1015,7 +1097,6 @@ const Chat = () => {
                 />
             </div>
 
-            {/* Mobile Navigation */}
             <MobileNav
                 user={user}
                 onSelectPrompt={handleSelectPrompt}
@@ -1024,11 +1105,9 @@ const Chat = () => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />  
 
-            {/* Mobile Bottom Bar with input field */}
             <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${
                 isDark ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'
             } pb-safe`}>
-                {/* Mobile input field */}
                 <div className="border-t border-b border-gray-200 dark:border-slate-700/50">
                     <MobileInput 
                         message={message}
@@ -1041,10 +1120,12 @@ const Chat = () => {
                         isToolsOpen={isToolsOpen}
                         setIsToolsOpen={setIsToolsOpen}
                         IconComponents={IconComponents}
+                        handleVoiceRecord={handleVoiceRecord} // Pass voice handler
+                        isRecording={isRecording} // Pass recording state
+                        transcribing={transcribing} // Pass transcribing state
                     />
                 </div>
                 
-                {/* Mobile bottom navigation */}
                 <MobileBottomBar 
                     handleNewChat={handleNewChat}
                     isWebMode={isWebMode}
