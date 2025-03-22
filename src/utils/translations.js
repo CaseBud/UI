@@ -81,7 +81,7 @@ export const translations = {
         'ha-NG': 'Tarihin Hira'
     },
     'chat.typing': {
-        'en-US': '',
+        'en-US': 'Loading',
         'es-ES': 'IA está escribiendo...',
         'fr-FR': 'L\'IA est en train d\'écrire...',
         'de-DE': 'KI schreibt...',
