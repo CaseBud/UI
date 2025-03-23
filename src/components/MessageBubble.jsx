@@ -76,11 +76,7 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
                                 ? isDark ? 'bg-slate-700 text-slate-200' : 'bg-gray-100 text-gray-800'
                                 : isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
                     }`}>
-                        <div className="text-sm leading-relaxed formatted-text">
-                            {isUser
-                                ? message.content.query
-                                : formattedContent || message.content.response}
-                        </div>
+                        <div className="text-sm leading-relaxed formatted-text" dangerouslySetInnerHTML={{ __html: isUser ? message.content.query : formattedContent || message.content.response }} />
                     </div>
 
                     {/* Message Actions and Timestamp */}
@@ -114,4 +110,4 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
     );
 };
 
-export default MessageBubble; 
+export default MessageBubble;

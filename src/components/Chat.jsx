@@ -801,22 +801,69 @@ const transcribeAudio = async (blob) => {
         const wavBlob = new Blob([audioBufferToWav(audioBuffer)], { type: 'audio/wav' });
         console.log('Converted WAV Blob:', { size: wavBlob.size, type: wavBlob.type });
 
-        const upload = await client.files.upload(wavBlob);
-        const params = { audio: upload.upload_url };
-        const result = await client.transcripts.transcribe(params);
-        
-        if (result.status === 'completed' && result.text) {
-            setMessage(result.text);
-            sendMessage(result.text);
+        // Upload WAV file to AssemblyAI
+        const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+            method: 'POST',
+            headers: {
+                'authorization': import.meta.env.VITE_ASSEMBLYAI_API_KEY,
+                'content-type': 'application/octet-stream'
+            },
+            body: wavBlob
+        });
+
+        if (!uploadResponse.ok) {
+            throw new Error('Upload failed, please try again. If you continue to have issues please reach out to support@assemblyai.com');
+        }
+
+        const uploadData = await uploadResponse.json();
+        const audioUrl = uploadData.upload_url;
+
+        // Request transcription
+        const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+            method: 'POST',
+            headers: {
+                'authorization': import.meta.env.VITE_ASSEMBLYAI_API_KEY,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({ audio_url: audioUrl })
+        });
+
+        if (!transcriptResponse.ok) {
+            throw new Error('Transcription request failed');
+        }
+
+        const transcriptData = await transcriptResponse.json();
+        const transcriptId = transcriptData.id;
+
+        // Poll for transcription result
+        let transcriptionResult;
+        while (true) {
+            const resultResponse = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+                headers: {
+                    'authorization': import.meta.env.VITE_ASSEMBLYAI_API_KEY
+                }
+            });
+
+            if (!resultResponse.ok) {
+                throw new Error('Failed to fetch transcription result');
+            }
+
+            transcriptionResult = await resultResponse.json();
+
+            if (transcriptionResult.status === 'completed') {
+                break;
+            } else if (transcriptionResult.status === 'failed') {
+                throw new Error('Transcription failed');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds before polling again
+        }
+
+        if (transcriptionResult.text) {
+            setMessage(transcriptionResult.text);
+            sendMessage(transcriptionResult.text);
         } else {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    type: 'error',
-                    content: { response: 'Transcription failed.' },
-                    timestamp: new Date(),
-                },
-            ]);
+            throw new Error('Transcription result is empty');
         }
     } catch (error) {
         console.error('Transcription error:', error);
@@ -828,8 +875,9 @@ const transcribeAudio = async (blob) => {
                 timestamp: new Date(),
             },
         ]);
+    } finally {
+        setTranscribing(false);
     }
-    setTranscribing(false);
 };
    // Effect to trigger transcription when audioBlob is set
 useEffect(() => {

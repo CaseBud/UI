@@ -154,3 +154,21 @@
 .scrollbar-thin {
   scrollbar-width: none;
 }
+
+.typing-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: currentColor;
+    border-radius: 50%;
+    animation: typing-bounce 1s infinite;
+}
+
+@keyframes typing-bounce {
+    0%, 80%, 100% {
+        transform: scale(0);
+    }
+    40% {
+        transform: scale(1);
+    }
+}
