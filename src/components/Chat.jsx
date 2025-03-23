@@ -1100,6 +1100,10 @@ useEffect(() => {
         }
     };
 
+    const handleVoiceToVoice = () => {
+        navigate('/voice-to-voice');
+    };
+
     return (
         <div className={`flex h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
             {/* Hidden file input for document upload */}
@@ -1212,6 +1216,7 @@ useEffect(() => {
         isRecording={isRecording}
         transcribing={transcribing}
         handleCameraCapture={handleCameraCapture} // Pass handleCameraCapture
+        handleVoiceToVoice={handleVoiceToVoice} // Add handleVoiceToVoice prop
     />
 </div>
             </div>

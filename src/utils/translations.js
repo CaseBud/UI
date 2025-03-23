@@ -200,6 +200,21 @@ export const translations = {
         'ig-NG': 'Ntinye Olu',
         'ha-NG': 'Shigar Murya'
     },
+    'chat.voiceToVoice': {
+        'en-US': 'Voice-to-Voice Chat',
+        'es-ES': 'Chat de Voz a Voz',
+        'fr-FR': 'Chat de Voix à Voix',
+        'de-DE': 'Sprach-zu-Sprach-Chat',
+        'zh-CN': '语音对话',
+        'ja-JP': '音声チャット',
+        'ko-KR': '음성 대화',
+        'ar-SA': 'دردشة صوتية',
+        'hi-IN': 'वॉइस टू वॉइस चैट',
+        'pt-BR': 'Chat de Voz para Voz',
+        'yo-NG': 'Ibaraẹnisọrọ Ohùn si Ohùn',
+        'ig-NG': 'Mkparịta ụka olu na olu',
+        'ha-NG': 'Hira ta murya zuwa murya'
+    },
     'copy.text': {
         'en-US': 'Copy to clipboard',
         'es-ES': 'Copiar al portapapeles',
@@ -657,6 +672,51 @@ export const translations = {
         'es-ES': 'Error al procesar la imagen: {error}',
         'fr-FR': 'Échec du traitement de l\'image: {error}',
         // Add other languages as needed
+    },
+    'voiceToVoice.title': {
+        'en-US': 'Voice to Voice Chat',
+        'es-ES': 'Chat de Voz a Voz',
+        'fr-FR': 'Chat de Voix à Voix',
+        'de-DE': 'Sprach-zu-Sprach-Chat',
+        'zh-CN': '语音对话',
+        'ja-JP': '音声チャット',
+        'ko-KR': '음성 대화',
+        'ar-SA': 'دردشة صوتية',
+        'hi-IN': 'वॉइस टू वॉइस चैट',
+        'pt-BR': 'Chat de Voz para Voz',
+        'yo-NG': 'Ibaraẹnisọrọ Ohùn si Ohùn',
+        'ig-NG': 'Mkparịta ụka olu na olu',
+        'ha-NG': 'Hira ta murya zuwa murya'
+    },
+    'voiceToVoice.processing': {
+        'en-US': 'Processing...',
+        'es-ES': 'Procesando...',
+        'fr-FR': 'Traitement...',
+        'de-DE': 'Verarbeitung...',
+        'zh-CN': '处理中...',
+        'ja-JP': '処理中...',
+        'ko-KR': '처리 중...',
+        'ar-SA': 'جارٍ المعالجة...',
+        'hi-IN': 'प्रसंस्करण...',
+        'pt-BR': 'Processando...',
+        'yo-NG': 'Nṣiṣẹ...',
+        'ig-NG': 'Na-arụ ọrụ...',
+        'ha-NG': 'Ana sarrafawa...'
+    },
+    'voiceToVoice.transcript': {
+        'en-US': 'Transcript',
+        'es-ES': 'Transcripción',
+        'fr-FR': 'Transcription',
+        'de-DE': 'Transkript',
+        'zh-CN': '文字记录',
+        'ja-JP': '文字記録',
+        'ko-KR': '기록',
+        'ar-SA': 'نص',
+        'hi-IN': 'प्रतिलिपि',
+        'pt-BR': 'Transcrição',
+        'yo-NG': 'Itumọ ọrọ',
+        'ig-NG': 'Nkọwa',
+        'ha-NG': 'Rubutu'
     }
 };
 

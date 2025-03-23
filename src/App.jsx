@@ -9,6 +9,7 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import DocumentEditor from './components/DocumentEditor';
 import DocumentList from './components/DocumentList';
+import VoiceToVoiceChat from './components/VoiceToVoiceChat'; // Import the new component
 import './styles/formattedText.css';
  
 
@@ -49,6 +50,16 @@ const App = () => {
                     element={
                         <ProtectedRoute>
                             <DocumentList />
+                        </ProtectedRoute>
+                    }
+                />
+
+                {/* Voice-to-Voice Chat Route */}
+                <Route
+                    path="/voice-to-voice"
+                    element={
+                        <ProtectedRoute>
+                            <VoiceToVoiceChat />
                         </ProtectedRoute>
                     }
                 />

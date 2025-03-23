@@ -25,6 +25,7 @@ const ChatInput = ({
     handleVoiceRecord, // Updated to match Chat.jsx
     isRecording,
     transcribing,
+    handleVoiceToVoice, // Added for Voice-to-Voice Chat
 }) => {
     const { isDark, lightModeBaseColor } = useTheme();
     const { currentLanguage } = useLanguage();
@@ -314,6 +315,20 @@ const ChatInput = ({
                                                     <circle cx="12" cy="13" r="4"/>
                                                 </svg>
                                                 Scan Document
+                                            </button>
+
+                                            {/* Voice-to-Voice Chat */}
+                                            <button
+                                                type="button"
+                                                onClick={handleVoiceToVoice}
+                                                className={`w-full flex items-center gap-2 p-1.5 rounded-md text-sm ${
+                                                    isDark
+                                                        ? 'text-slate-300 hover:bg-slate-700/50'
+                                                        : `text-gray-700 hover:bg-[${lightModeBaseColor}]/50`
+                                                }`}
+                                            >
+                                                <FaMicrophone className="w-4 h-4" />
+                                                {translate('chat.voiceToVoice', currentLanguage) || 'Voice-to-Voice Chat'}
                                             </button>
                                         </div>
                                     </div>
