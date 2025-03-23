@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { documentsApi } from '../utils/api';
+import { documentsApi, chatApi } from '../utils/api';
 import DocumentToolbar from './DocumentToolbar';
 import RichTextEditor from './RichTextEditor';
 import AIPromptPanel from './AIPromptPanel';
 import RevisionHistory from './RevisionHistory';
+import TypingAnimation from './TypingAnimation'; // Import TypingAnimation component
 
 const DocumentEditor = () => {
     const navigate = useNavigate();
@@ -34,24 +35,28 @@ const DocumentEditor = () => {
             loadDocument(id);
             loadRevisions(id);
         } else if (location.state?.initialContent) {
-            // Use initial content from navigation state (e.g., when creating a document from chat)
-            setDocumentContent(location.state.initialContent);
+            initializeContent(location.state.initialContent);
             if (location.state.initialTitle) {
                 setDocumentTitle(location.state.initialTitle);
             }
-            lastSavedRef.current = location.state.initialContent;
         }
     }, [location]);
 
     // Auto-save timer
     useEffect(() => {
-        const autoSaveInterval = setInterval(() => {
-            if (documentContent !== lastSavedRef.current) {
+        let autoSaveTimer;
+        
+        if (documentContent !== lastSavedRef.current) {
+            autoSaveTimer = setTimeout(() => {
                 saveDocument();
+            }, 30000); // Auto-save after 30 seconds of no changes
+        }
+        
+        return () => {
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
             }
-        }, 30000); // Auto-save every 30 seconds
-
-        return () => clearInterval(autoSaveInterval);
+        };
     }, [documentContent, documentId, documentTitle]);
 
     // Track changes for the "saved" indicator
@@ -93,21 +98,31 @@ const DocumentEditor = () => {
     };
 
     const handleTextSelection = (text, range) => {
-        setSelectedText(text);
-        setSelectionRange(range);
+        // Only update selection if there's actually text selected
+        if (text && text.trim()) {
+            setSelectedText(text);
+            setSelectionRange(range);
+        } else {
+            setSelectedText('');
+            setSelectionRange(null);
+        }
     };
 
     const saveDocument = async () => {
+        if (!documentContent.trim()) {
+            return; // Don't save empty documents
+        }
+        
         setIsProcessing(true);
         try {
             const response = await documentsApi.saveDocument({
                 id: documentId,
-                title: documentTitle,
+                title: documentTitle || 'Untitled Document',
                 content: documentContent
             });
             
             // Update document ID if this is a new document
-            if (!documentId) {
+            if (!documentId && response?.id) {
                 setDocumentId(response.id);
                 // Update URL with the new document ID
                 navigate(`/document-editor?id=${response.id}`, { replace: true });
@@ -117,13 +132,12 @@ const DocumentEditor = () => {
             setIsSaved(true);
             
             // Reload revisions after saving
-            if (documentId) {
-                loadRevisions(documentId);
-            } else if (response.id) {
-                loadRevisions(response.id);
+            if (response?.id) {
+                await loadRevisions(response.id);
             }
         } catch (error) {
             console.error('Failed to save document:', error);
+            // TODO: Add error notification to user
         } finally {
             setIsProcessing(false);
         }
@@ -132,13 +146,8 @@ const DocumentEditor = () => {
     const handleAIPrompt = async (prompt) => {
         setIsProcessing(true);
         try {
-            const response = await documentsApi.getAIAssistance(
-                prompt,
-                documentContent,
-                selectedText
-            );
-            
-            setAiSuggestion(response.suggestion);
+            const response = await chatApi.sendMessage(prompt);
+            setAiSuggestion(response.response);
         } catch (error) {
             console.error('Failed to process AI prompt:', error);
         } finally {
@@ -149,19 +158,31 @@ const DocumentEditor = () => {
     const applyAISuggestion = () => {
         if (!aiSuggestion) return;
         
-        if (selectedText && selectionRange) {
-            // Apply suggestion to selected text only
-            const beforeSelection = documentContent.substring(0, selectionRange.start);
-            const afterSelection = documentContent.substring(selectionRange.end);
-            setDocumentContent(beforeSelection + aiSuggestion + afterSelection);
-        } else {
-            // Apply suggestion to entire document
-            setDocumentContent(aiSuggestion);
+        try {
+            if (selectedText && selectionRange) {
+                // Get current content from editor
+                const currentContent = editorRef.current.getContent();
+                
+                // Apply suggestion to selected text only
+                const beforeSelection = currentContent.substring(0, selectionRange.start);
+                const afterSelection = currentContent.substring(selectionRange.end);
+                const newContent = beforeSelection + aiSuggestion + afterSelection;
+                
+                // Update editor content
+                editorRef.current.setContent(newContent);
+                setDocumentContent(newContent);
+            } else {
+                // Apply suggestion to entire document
+                editorRef.current.setContent(aiSuggestion);
+                setDocumentContent(aiSuggestion);
+            }
+            
+            // Clear the suggestion after applying
+            setAiSuggestion('');
+            setIsSaved(false);
+        } catch (error) {
+            console.error('Failed to apply AI suggestion:', error);
         }
-        
-        // Clear the suggestion after applying
-        setAiSuggestion('');
-        setIsSaved(false);
     };
 
     const exportDocument = (format) => {
@@ -188,6 +209,23 @@ const DocumentEditor = () => {
         setDocumentTitle(revision.title);
         setIsSaved(false);
         setShowRevisionHistory(false);
+    };
+
+    // Add this function to handle content initialization
+    const initializeContent = (content) => {
+        if (!content) return;
+        
+        try {
+            // Update editor content
+            if (editorRef.current) {
+                editorRef.current.setContent(content);
+            }
+            setDocumentContent(content);
+            lastSavedRef.current = content;
+            setIsSaved(true);
+        } catch (error) {
+            console.error('Failed to initialize content:', error);
+        }
     };
 
     return (
@@ -283,6 +321,7 @@ const DocumentEditor = () => {
                         isProcessing={isProcessing}
                         selectedText={selectedText}
                     />
+                    {isProcessing && <TypingAnimation />} {/* Add typing animation */}
                 </div>
             </div>
 
@@ -298,4 +337,4 @@ const DocumentEditor = () => {
     );
 };
 
-export default DocumentEditor; 
+export default DocumentEditor;

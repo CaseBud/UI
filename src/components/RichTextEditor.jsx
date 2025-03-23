@@ -57,15 +57,16 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
             const range = selection.getRangeAt(0);
             const selectedText = selection.toString();
             
-            if (selectedText && onSelect) {
-                onSelect(selectedText, {
-                    start: getTextOffset(editorRef.current, range.startContainer, range.startOffset),
-                    end: getTextOffset(editorRef.current, range.endContainer, range.endOffset)
-                });
+            // Only trigger onSelect if selection is within editor
+            if (editorRef.current.contains(range.startContainer)) {
+                if (selectedText && onSelect) {
+                    onSelect(selectedText, {
+                        start: getTextOffset(editorRef.current, range.startContainer, range.startOffset),
+                        end: getTextOffset(editorRef.current, range.endContainer, range.endOffset),
+                        range: range.cloneRange() // Store actual range object
+                    });
+                }
             }
-            
-            // Update formatting state based on current selection
-            updateFormattingState();
         }
     };
 
@@ -281,4 +282,4 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
     );
 });
 
-export default RichTextEditor; 
+export default RichTextEditor;
