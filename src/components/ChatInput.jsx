@@ -283,6 +283,38 @@ const ChatInput = ({
                                                 </svg>
                                                 {translate('document.upload', currentLanguage)}
                                             </button>
+
+                                            {/* Camera/OCR Button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    // Create a temporary input element for camera capture
+                                                    const input = document.createElement('input');
+                                                    input.type = 'file';
+                                                    input.accept = 'image/*';
+                                                    input.capture = 'environment'; // Use rear camera
+                                                    input.onchange = (e) => handleCameraCapture(e);
+                                                    input.click();
+                                                    setIsToolsOpen(false);
+                                                }}
+                                                className={`w-full flex items-center gap-2 p-1.5 rounded-md text-sm ${
+                                                    isDark
+                                                        ? 'text-slate-300 hover:bg-slate-700/50'
+                                                        : `text-gray-700 hover:bg-[${lightModeBaseColor}]/50`
+                                                }`}
+                                            >
+                                                <svg
+                                                    className="w-4 h-4"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                >
+                                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                                    <circle cx="12" cy="13" r="4"/>
+                                                </svg>
+                                                Scan Document
+                                            </button>
                                         </div>
                                     </div>
                                 )}

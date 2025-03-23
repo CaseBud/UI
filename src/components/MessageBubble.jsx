@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { translate } from '../utils/translations'; // Add this import
 import DOMPurify from 'dompurify';
 import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
@@ -18,6 +19,7 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
     const { isDark } = useTheme();
     const { currentLanguage } = useLanguage();
     const [formattedContent, setFormattedContent] = useState('');
+    const [copySuccess, setCopySuccess] = useState(false);
     
     const isUser = message.type === 'user';
     const isSystem = message.type === 'system';
@@ -47,6 +49,17 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
         }
     }, [message, isUser]);
 
+    const handleCopyText = async () => {
+        try {
+            const textToCopy = message.content.response || message.content.query;
+            await navigator.clipboard.writeText(textToCopy);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (err) {
+            console.error('Failed to copy text:', err);
+        }
+    };
+
     return (
         <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
             <div className={`flex ${isUser ? 'flex-row-reverse' : 'flex-row'} max-w-[85%]`}>
@@ -69,7 +82,7 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
 
                 {/* Message content */}
                 <div className="flex flex-col">
-                    <div className={`px-3 py-2 rounded-lg ${
+                    <div className={`relative px-3 py-2 rounded-lg ${
                         isUser
                             ? isDark ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
                             : isSystem
@@ -77,6 +90,28 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
                                 : isDark ? 'bg-slate-800 text-slate-200' : 'bg-white text-gray-800 border border-gray-200'
                     }`}>
                         <div className="text-sm leading-relaxed formatted-text" dangerouslySetInnerHTML={{ __html: isUser ? message.content.query : formattedContent || message.content.response }} />
+                        
+                        {/* Copy button - Only show for assistant messages */}
+                        {!isUser && !isSystem && (
+                            <button
+                                onClick={handleCopyText}
+                                className={`absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity
+                                    ${isDark ? 'hover:bg-slate-700/50' : 'hover:bg-gray-100'}
+                                    ${copySuccess ? 'text-green-500' : isDark ? 'text-slate-400' : 'text-gray-400'}`}
+                                title={copySuccess ? translate('copy.success', currentLanguage) : translate('copy.text', currentLanguage)}
+                            >
+                                {copySuccess ? (
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                    </svg>
+                                )}
+                            </button>
+                        )}
                     </div>
 
                     {/* Message Actions and Timestamp */}

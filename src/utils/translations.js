@@ -200,6 +200,36 @@ export const translations = {
         'ig-NG': 'Ntinye Olu',
         'ha-NG': 'Shigar Murya'
     },
+    'copy.text': {
+        'en-US': 'Copy to clipboard',
+        'es-ES': 'Copiar al portapapeles',
+        'fr-FR': 'Copier dans le presse-papier',
+        'de-DE': 'In die Zwischenablage kopieren',
+        'zh-CN': '复制到剪贴板',
+        'ja-JP': 'クリップボードにコピー',
+        'ko-KR': '클립보드에 복사',
+        'ar-SA': 'نسخ إلى الحافظة',
+        'hi-IN': 'क्लिपबोर्ड पर कॉपी करें',
+        'pt-BR': 'Copiar para a área de transferência',
+        'yo-NG': 'Dà sí pátákó ìyàsọ́tọ̀',
+        'ig-NG': 'Detuo na klipbọọdụ',
+        'ha-NG': 'Kwafi zuwa clipboard'
+    },
+    'copy.success': {
+        'en-US': 'Copied!',
+        'es-ES': '¡Copiado!',
+        'fr-FR': 'Copié !',
+        'de-DE': 'Kopiert!',
+        'zh-CN': '已复制！',
+        'ja-JP': 'コピーしました！',
+        'ko-KR': '복사됨!',
+        'ar-SA': 'تم النسخ!',
+        'hi-IN': 'कॉपी हो गया!',
+        'pt-BR': 'Copiado!',
+        'yo-NG': 'Ti daakọ!',
+        'ig-NG': 'Edetụrụ!',
+        'ha-NG': 'An kwafi!'
+    },
     
     // Document related
     'document.upload': {
@@ -608,6 +638,24 @@ export const translations = {
     },
     'default.useOCR': {
         'en-US': 'Would you like to extract text from this image using OCR?',
+        // Add other languages as needed
+    },
+    'camera.scan': {
+        'en-US': 'Scan Document',
+        'es-ES': 'Escanear Documento',
+        'fr-FR': 'Scanner le Document',
+        // Add other languages as needed
+    },
+    'camera.processing': {
+        'en-US': 'Processing image...',
+        'es-ES': 'Procesando imagen...',
+        'fr-FR': 'Traitement de l\'image...',
+        // Add other languages as needed
+    },
+    'camera.error': {
+        'en-US': 'Failed to process image: {error}',
+        'es-ES': 'Error al procesar la imagen: {error}',
+        'fr-FR': 'Échec du traitement de l\'image: {error}',
         // Add other languages as needed
     }
 };

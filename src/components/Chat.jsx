@@ -1065,6 +1065,41 @@ useEffect(() => {
         }
     };
 
+    // Add camera capture handler
+    const handleCameraCapture = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            setMessages(prev => [...prev, {
+                type: 'system',
+                content: {
+                    response: translate('default.ocrProcessing', currentLanguage)
+                        .replace('{name}', file.name)
+                },
+                timestamp: new Date()
+            }]);
+
+            // Process the image
+            const result = await chatApi.performOCR(file);
+            
+            if (result.text) {
+                // Send the extracted text through the standard conversation endpoint
+                await sendMessage(result.text);
+            }
+        } catch (error) {
+            console.error('Camera capture/OCR failed:', error);
+            setMessages(prev => [...prev, {
+                type: 'error',
+                content: {
+                    response: translate('default.ocrError', currentLanguage)
+                        .replace('{error}', error.message)
+                },
+                timestamp: new Date()
+            }]);
+        }
+    };
+
     return (
         <div className={`flex h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
             {/* Hidden file input for document upload */}
@@ -1176,6 +1211,7 @@ useEffect(() => {
         handleVoiceRecord={handleVoiceRecord} // Correct prop name
         isRecording={isRecording}
         transcribing={transcribing}
+        handleCameraCapture={handleCameraCapture} // Pass handleCameraCapture
     />
 </div>
             </div>

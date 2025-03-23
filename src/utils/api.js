@@ -275,7 +275,18 @@ export const chatApi = {
                 throw new Error('File must be an image');
             }
 
+            // Compress the image if it's too large
+            if (file.size > 5000000) { // 5MB
+                const compressedFile = await compressImage(file);
+                file = compressedFile;
+            }
+
             const text = await ocrService.extractText(file);
+            
+            if (!text.trim()) {
+                throw new Error('No text could be extracted from the image');
+            }
+
             return {
                 success: true,
                 text: text,
