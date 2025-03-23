@@ -1140,11 +1140,27 @@ useEffect(() => {
             />
 
             <div className="flex-1 flex flex-col">
-                <ChatHeader 
-                    onDocumentUploadClick={handleDocumentUploadClick}
-                    setIsHistoryOpen={setIsHistoryOpen}
-                    isHistoryOpen={isHistoryOpen}
-                />
+                {/* For mobile view, insert MobileNav to the left of ChatHeader */}
+                <div className="md:hidden flex items-center">
+                    <MobileNav 
+                        user={user} 
+                        onSelectPrompt={handleSelectPrompt} 
+                        isTempUser={isTempUser} 
+                    />
+                    <ChatHeader 
+                        onDocumentUploadClick={handleDocumentUploadClick}
+                        setIsHistoryOpen={setIsHistoryOpen}
+                        isHistoryOpen={isHistoryOpen}
+                    />
+                </div>
+                {/* For desktop, use the original header */}
+                <div className="hidden md:block">
+                    <ChatHeader 
+                        onDocumentUploadClick={handleDocumentUploadClick}
+                        setIsHistoryOpen={setIsHistoryOpen}
+                        isHistoryOpen={isHistoryOpen}
+                    />
+                </div>
 
                 <div className="flex-1 overflow-y-auto">
                     <div className="max-w-4xl mx-auto py-3 space-y-2 pb-40 md:pb-4">
