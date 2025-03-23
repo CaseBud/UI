@@ -574,7 +574,7 @@ const Chat = () => {
             setIsTyping(true);
 
             let response;
-
+            
             // Check if we have active documents and are in document analysis mode
             if (isDocumentAnalysis && activeDocuments.length > 0) {
                 console.log('Sending document analysis with docs:', activeDocuments);

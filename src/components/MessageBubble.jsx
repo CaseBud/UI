@@ -60,6 +60,20 @@ const MessageBubble = ({ message, handleTextToSpeechToggle, IconComponents }) =>
         }
     };
 
+    const formatContent = (content) => {
+        if (message.isWebSearch && message.formatted) {
+            // Preserve formatting for web search results
+            return (
+                <div className="whitespace-pre-wrap">
+                    {content}
+                </div>
+            );
+        }
+        
+        // Regular message formatting
+        return <div>{content}</div>;
+    };
+
     return (
         <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'} mb-3`}>
             <div className={`flex ${isUser ? 'flex-row-reverse' : 'flex-row'} max-w-[85%]`}>
