@@ -185,21 +185,23 @@ export const chatApi = {
         try {
             const endpoint = '/api/chat/document-analysis';
             
-            // Only include documentIds that are valid strings
-            const validDocIds = (documentIds || [])
-                .filter(id => id && typeof id === 'string')
-                .map(id => id.trim());
+            // Ensure documentIds is an array and contains valid values
+            const validDocIds = Array.isArray(documentIds) 
+                ? documentIds.filter(id => id && typeof id === 'string' || typeof id === 'number')
+                : [];
             
             if (!validDocIds.length) {
-                throw new ApiError('No valid documents selected', 400);
+                console.error('No valid document IDs provided:', documentIds);
+                throw new ApiError('No valid documents selected. Please upload a document first.', 400);
             }
+
+            console.log('Sending document analysis with IDs:', validDocIds);
 
             const requestBody = {
                 query: query.trim(),
                 documentIds: validDocIds
             };
 
-            // Only include conversationId if it exists
             if (conversationId) {
                 requestBody.conversationId = conversationId;
             }
@@ -209,7 +211,6 @@ export const chatApi = {
                 body: JSON.stringify(requestBody)
             });
             
-            // Ensure response matches expected format
             if (!response || (!response.response && !response.message)) {
                 throw new ApiError('Invalid response from server', 500);
             }
@@ -227,11 +228,8 @@ export const chatApi = {
 
     sendDocument: async (file) => {
         try {
-            // Create FormData with exact field names matching API spec
             const formData = new FormData();
-            // 'file' field for the binary data
             formData.append('file', file, file.name);
-            // 'name' field for the string name
             formData.append('name', file.name);
 
             const response = await fetchWithToken('/api/documents', {
@@ -242,30 +240,54 @@ export const chatApi = {
                 }
             }, true);
 
-            // Handle the successful response
-            if (response?.status === 'success' && response?.data) {
-                return {
-                    success: true,
-                    message: "Document uploaded successfully",
-                    data: {
-                        document: {
-                            _id: response.data._id || response.data.id,
-                            name: file.name,
-                            type: file.type,
-                            size: file.size
-                        }
-                    },
-                    conversationId: response.data.conversationId || null
-                };
+            // Ensure response format is handled correctly
+            if (response?.status !== 'success' || !response?.data?.document) {
+                console.error('Invalid response format:', response);
+                throw new Error('No document ID in response');
             }
 
-            throw new ApiError('Invalid response format from server', 500);
+            const documentData = {
+                _id: response.data.document._id,
+                name: file.name,
+                type: file.type,
+                size: file.size
+            };
+
+            return {
+                success: true,
+                message: "Document uploaded successfully",
+                data: {
+                    document: documentData
+                },
+                conversationId: response.data.document.conversationId || null
+            };
+
         } catch (error) {
             console.error('Document upload error details:', error);
-            throw new ApiError(
-                error.message || 'Failed to upload document', 
-                error.status || 500
-            );
+            throw new ApiError(error.message || 'Failed to upload document', error.status || 500);
+        }
+    },
+
+    // Add new OCR method
+    performOCR: async (file) => {
+        try {
+            if (!file.type.startsWith('image/')) {
+                throw new Error('File must be an image');
+            }
+
+            const text = await ocrService.extractText(file);
+            return {
+                success: true,
+                text: text,
+                file: {
+                    name: file.name,
+                    type: file.type,
+                    size: file.size
+                }
+            };
+        } catch (error) {
+            console.error('OCR error:', error);
+            throw new ApiError(error.message || 'Failed to perform OCR', 500);
         }
     }
 };
