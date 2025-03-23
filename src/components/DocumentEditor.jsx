@@ -7,6 +7,8 @@ import RichTextEditor from './RichTextEditor';
 import AIPromptPanel from './AIPromptPanel';
 import RevisionHistory from './RevisionHistory';
 import TypingAnimation from './TypingAnimation'; // Import TypingAnimation component
+import debounce from 'lodash/debounce'; // Correct lodash import
+import AICommentPanel from './AICommentPanel';
 
 const DocumentEditor = () => {
     const navigate = useNavigate();
@@ -24,6 +26,10 @@ const DocumentEditor = () => {
     const [isSaved, setIsSaved] = useState(true);
     const editorRef = useRef(null);
     const lastSavedRef = useRef(documentContent);
+    const [aiSuggestions, setAiSuggestions] = useState([]);
+    const [aiComments, setAiComments] = useState([]);
+    const [wsConnection, setWsConnection] = useState(null);
+    const [aiMode, setAiMode] = useState('realtime'); // 'realtime' or 'manual'
 
     // Load document if ID is provided in URL or use initial content from navigation state
     useEffect(() => {
@@ -90,6 +96,7 @@ const DocumentEditor = () => {
 
     const handleContentChange = (newContent) => {
         setDocumentContent(newContent);
+        debouncedAIAnalysis(newContent);
     };
 
     const handleTitleChange = (e) => {
@@ -228,6 +235,55 @@ const DocumentEditor = () => {
         }
     };
 
+    // Initialize WebSocket connection
+    useEffect(() => {
+        const ws = new WebSocket('your_websocket_url');
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'suggestion') {
+                handleRealtimeAISuggestion(data.content);
+            } else if (data.type === 'comment') {
+                setAiComments(prev => [...prev, data.content]);
+            }
+        };
+        
+        setWsConnection(ws);
+        return () => ws.close();
+    }, []);
+
+    // Debounced function for sending content to AI
+    const debouncedAIAnalysis = useRef(
+        debounce((content) => {
+            if (aiMode === 'realtime' && wsConnection?.readyState === WebSocket.OPEN) {
+                wsConnection.send(JSON.stringify({
+                    type: 'analyze',
+                    content: content
+                }));
+            }
+        }, 1000)
+    ).current;
+
+    const handleRealtimeAISuggestion = (suggestion) => {
+        setAiSuggestions(prev => [...prev, {
+            id: Date.now(),
+            content: suggestion,
+            applied: false
+        }]);
+    };
+
+    const applySuggestion = (suggestionId) => {
+        const suggestion = aiSuggestions.find(s => s.id === suggestionId);
+        if (suggestion && editorRef.current) {
+            // Apply the suggestion to the editor
+            editorRef.current.applySuggestion(suggestion.content);
+            // Mark suggestion as applied
+            setAiSuggestions(prev => 
+                prev.map(s => s.id === suggestionId ? { ...s, applied: true } : s)
+            );
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-gradient-to-b from-slate-900 to-slate-800">
             {/* Header */}
@@ -308,20 +364,48 @@ const DocumentEditor = () => {
                             content={documentContent}
                             onChange={handleContentChange}
                             onSelect={handleTextSelection}
+                            aiSuggestions={aiSuggestions}
                         />
                     </div>
                 </div>
 
-                {/* AI Prompt Panel - Right Side */}
+                {/* AI Panels - Right Side */}
                 <div className="w-80 border-l border-slate-700/50 bg-slate-800/50 backdrop-blur-sm overflow-y-auto">
-                    <AIPromptPanel
-                        onSubmitPrompt={handleAIPrompt}
-                        aiSuggestion={aiSuggestion}
-                        onApplySuggestion={applyAISuggestion}
-                        isProcessing={isProcessing}
-                        selectedText={selectedText}
-                    />
-                    {isProcessing && <TypingAnimation />} {/* Add typing animation */}
+                    <div className="flex flex-col h-full">
+                        <AIPromptPanel
+                            onSubmitPrompt={handleAIPrompt}
+                            aiSuggestion={aiSuggestion}
+                            onApplySuggestion={applyAISuggestion}
+                            isProcessing={isProcessing}
+                            selectedText={selectedText}
+                            aiMode={aiMode}
+                            onAIModeChange={setAiMode}
+                        />
+                        
+                        {/* AI Suggestions Panel */}
+                        <div className="border-t border-slate-700/50 p-4">
+                            <h3 className="text-slate-200 font-medium mb-2">AI Suggestions</h3>
+                            {aiSuggestions.map(suggestion => (
+                                <div 
+                                    key={suggestion.id}
+                                    className="mb-2 p-2 bg-slate-700/30 rounded"
+                                >
+                                    <p className="text-sm text-slate-300">{suggestion.content}</p>
+                                    {!suggestion.applied && (
+                                        <button
+                                            onClick={() => applySuggestion(suggestion.id)}
+                                            className="mt-1 text-xs text-blue-400 hover:text-blue-300"
+                                        >
+                                            Apply Suggestion
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* AI Comments Panel */}
+                        <AICommentPanel comments={aiComments} />
+                    </div>
                 </div>
             </div>
 
