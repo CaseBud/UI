@@ -342,12 +342,26 @@ export const documentsApi = {
     // Document Editor API functions - using local storage until backend is ready
     saveDocument: async (document) => {
         try {
+            // Validate document data
+            if (!document.content) {
+                throw new Error('Document content is required');
+            }
+
             // When backend is ready, this will be replaced with an API call
-            // For now, use local storage via documentService
-            return documentService.saveDocument(document);
+            const savedDoc = documentService.saveDocument({
+                ...document,
+                title: document.title || 'Untitled Document',
+                updatedAt: new Date().toISOString()
+            });
+
+            return {
+                success: true,
+                id: savedDoc.id,
+                message: 'Document saved successfully'
+            };
         } catch (error) {
             console.error('Error saving document:', error);
-            throw error;
+            throw new ApiError('Failed to save document: ' + error.message, 500);
         }
     },
     

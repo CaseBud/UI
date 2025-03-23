@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { documentsApi } from '../utils/api';
+import { documentsApi, chatApi } from '../utils/api';
 import DocumentToolbar from './DocumentToolbar';
 import RichTextEditor from './RichTextEditor';
 import AIPromptPanel from './AIPromptPanel';
 import RevisionHistory from './RevisionHistory';
+import TypingAnimation from './TypingAnimation'; // Import TypingAnimation component
+import debounce from 'lodash/debounce'; // Correct lodash import
+import AICommentPanel from './AICommentPanel';
 
 const DocumentEditor = () => {
     const navigate = useNavigate();
@@ -23,6 +26,10 @@ const DocumentEditor = () => {
     const [isSaved, setIsSaved] = useState(true);
     const editorRef = useRef(null);
     const lastSavedRef = useRef(documentContent);
+    const [aiSuggestions, setAiSuggestions] = useState([]);
+    const [aiComments, setAiComments] = useState([]);
+    const [wsConnection, setWsConnection] = useState(null);
+    const [aiMode, setAiMode] = useState('realtime'); // 'realtime' or 'manual'
 
     // Load document if ID is provided in URL or use initial content from navigation state
     useEffect(() => {
@@ -34,24 +41,28 @@ const DocumentEditor = () => {
             loadDocument(id);
             loadRevisions(id);
         } else if (location.state?.initialContent) {
-            // Use initial content from navigation state (e.g., when creating a document from chat)
-            setDocumentContent(location.state.initialContent);
+            initializeContent(location.state.initialContent);
             if (location.state.initialTitle) {
                 setDocumentTitle(location.state.initialTitle);
             }
-            lastSavedRef.current = location.state.initialContent;
         }
     }, [location]);
 
     // Auto-save timer
     useEffect(() => {
-        const autoSaveInterval = setInterval(() => {
-            if (documentContent !== lastSavedRef.current) {
+        let autoSaveTimer;
+        
+        if (documentContent !== lastSavedRef.current) {
+            autoSaveTimer = setTimeout(() => {
                 saveDocument();
+            }, 30000); // Auto-save after 30 seconds of no changes
+        }
+        
+        return () => {
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
             }
-        }, 30000); // Auto-save every 30 seconds
-
-        return () => clearInterval(autoSaveInterval);
+        };
     }, [documentContent, documentId, documentTitle]);
 
     // Track changes for the "saved" indicator
@@ -85,6 +96,7 @@ const DocumentEditor = () => {
 
     const handleContentChange = (newContent) => {
         setDocumentContent(newContent);
+        debouncedAIAnalysis(newContent);
     };
 
     const handleTitleChange = (e) => {
@@ -93,21 +105,31 @@ const DocumentEditor = () => {
     };
 
     const handleTextSelection = (text, range) => {
-        setSelectedText(text);
-        setSelectionRange(range);
+        // Only update selection if there's actually text selected
+        if (text && text.trim()) {
+            setSelectedText(text);
+            setSelectionRange(range);
+        } else {
+            setSelectedText('');
+            setSelectionRange(null);
+        }
     };
 
     const saveDocument = async () => {
+        if (!documentContent.trim()) {
+            return; // Don't save empty documents
+        }
+        
         setIsProcessing(true);
         try {
             const response = await documentsApi.saveDocument({
                 id: documentId,
-                title: documentTitle,
+                title: documentTitle || 'Untitled Document',
                 content: documentContent
             });
             
             // Update document ID if this is a new document
-            if (!documentId) {
+            if (!documentId && response?.id) {
                 setDocumentId(response.id);
                 // Update URL with the new document ID
                 navigate(`/document-editor?id=${response.id}`, { replace: true });
@@ -117,13 +139,12 @@ const DocumentEditor = () => {
             setIsSaved(true);
             
             // Reload revisions after saving
-            if (documentId) {
-                loadRevisions(documentId);
-            } else if (response.id) {
-                loadRevisions(response.id);
+            if (response?.id) {
+                await loadRevisions(response.id);
             }
         } catch (error) {
             console.error('Failed to save document:', error);
+            // TODO: Add error notification to user
         } finally {
             setIsProcessing(false);
         }
@@ -132,13 +153,8 @@ const DocumentEditor = () => {
     const handleAIPrompt = async (prompt) => {
         setIsProcessing(true);
         try {
-            const response = await documentsApi.getAIAssistance(
-                prompt,
-                documentContent,
-                selectedText
-            );
-            
-            setAiSuggestion(response.suggestion);
+            const response = await chatApi.sendMessage(prompt);
+            setAiSuggestion(response.response);
         } catch (error) {
             console.error('Failed to process AI prompt:', error);
         } finally {
@@ -149,19 +165,31 @@ const DocumentEditor = () => {
     const applyAISuggestion = () => {
         if (!aiSuggestion) return;
         
-        if (selectedText && selectionRange) {
-            // Apply suggestion to selected text only
-            const beforeSelection = documentContent.substring(0, selectionRange.start);
-            const afterSelection = documentContent.substring(selectionRange.end);
-            setDocumentContent(beforeSelection + aiSuggestion + afterSelection);
-        } else {
-            // Apply suggestion to entire document
-            setDocumentContent(aiSuggestion);
+        try {
+            if (selectedText && selectionRange) {
+                // Get current content from editor
+                const currentContent = editorRef.current.getContent();
+                
+                // Apply suggestion to selected text only
+                const beforeSelection = currentContent.substring(0, selectionRange.start);
+                const afterSelection = currentContent.substring(selectionRange.end);
+                const newContent = beforeSelection + aiSuggestion + afterSelection;
+                
+                // Update editor content
+                editorRef.current.setContent(newContent);
+                setDocumentContent(newContent);
+            } else {
+                // Apply suggestion to entire document
+                editorRef.current.setContent(aiSuggestion);
+                setDocumentContent(aiSuggestion);
+            }
+            
+            // Clear the suggestion after applying
+            setAiSuggestion('');
+            setIsSaved(false);
+        } catch (error) {
+            console.error('Failed to apply AI suggestion:', error);
         }
-        
-        // Clear the suggestion after applying
-        setAiSuggestion('');
-        setIsSaved(false);
     };
 
     const exportDocument = (format) => {
@@ -188,6 +216,72 @@ const DocumentEditor = () => {
         setDocumentTitle(revision.title);
         setIsSaved(false);
         setShowRevisionHistory(false);
+    };
+
+    // Add this function to handle content initialization
+    const initializeContent = (content) => {
+        if (!content) return;
+        
+        try {
+            // Update editor content
+            if (editorRef.current) {
+                editorRef.current.setContent(content);
+            }
+            setDocumentContent(content);
+            lastSavedRef.current = content;
+            setIsSaved(true);
+        } catch (error) {
+            console.error('Failed to initialize content:', error);
+        }
+    };
+
+    // Initialize WebSocket connection
+    useEffect(() => {
+        const ws = new WebSocket('your_websocket_url');
+        
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'suggestion') {
+                handleRealtimeAISuggestion(data.content);
+            } else if (data.type === 'comment') {
+                setAiComments(prev => [...prev, data.content]);
+            }
+        };
+        
+        setWsConnection(ws);
+        return () => ws.close();
+    }, []);
+
+    // Debounced function for sending content to AI
+    const debouncedAIAnalysis = useRef(
+        debounce((content) => {
+            if (aiMode === 'realtime' && wsConnection?.readyState === WebSocket.OPEN) {
+                wsConnection.send(JSON.stringify({
+                    type: 'analyze',
+                    content: content
+                }));
+            }
+        }, 1000)
+    ).current;
+
+    const handleRealtimeAISuggestion = (suggestion) => {
+        setAiSuggestions(prev => [...prev, {
+            id: Date.now(),
+            content: suggestion,
+            applied: false
+        }]);
+    };
+
+    const applySuggestion = (suggestionId) => {
+        const suggestion = aiSuggestions.find(s => s.id === suggestionId);
+        if (suggestion && editorRef.current) {
+            // Apply the suggestion to the editor
+            editorRef.current.applySuggestion(suggestion.content);
+            // Mark suggestion as applied
+            setAiSuggestions(prev => 
+                prev.map(s => s.id === suggestionId ? { ...s, applied: true } : s)
+            );
+        }
     };
 
     return (
@@ -270,19 +364,48 @@ const DocumentEditor = () => {
                             content={documentContent}
                             onChange={handleContentChange}
                             onSelect={handleTextSelection}
+                            aiSuggestions={aiSuggestions}
                         />
                     </div>
                 </div>
 
-                {/* AI Prompt Panel - Right Side */}
+                {/* AI Panels - Right Side */}
                 <div className="w-80 border-l border-slate-700/50 bg-slate-800/50 backdrop-blur-sm overflow-y-auto">
-                    <AIPromptPanel
-                        onSubmitPrompt={handleAIPrompt}
-                        aiSuggestion={aiSuggestion}
-                        onApplySuggestion={applyAISuggestion}
-                        isProcessing={isProcessing}
-                        selectedText={selectedText}
-                    />
+                    <div className="flex flex-col h-full">
+                        <AIPromptPanel
+                            onSubmitPrompt={handleAIPrompt}
+                            aiSuggestion={aiSuggestion}
+                            onApplySuggestion={applyAISuggestion}
+                            isProcessing={isProcessing}
+                            selectedText={selectedText}
+                            aiMode={aiMode}
+                            onAIModeChange={setAiMode}
+                        />
+                        
+                        {/* AI Suggestions Panel */}
+                        <div className="border-t border-slate-700/50 p-4">
+                            <h3 className="text-slate-200 font-medium mb-2">AI Suggestions</h3>
+                            {aiSuggestions.map(suggestion => (
+                                <div 
+                                    key={suggestion.id}
+                                    className="mb-2 p-2 bg-slate-700/30 rounded"
+                                >
+                                    <p className="text-sm text-slate-300">{suggestion.content}</p>
+                                    {!suggestion.applied && (
+                                        <button
+                                            onClick={() => applySuggestion(suggestion.id)}
+                                            className="mt-1 text-xs text-blue-400 hover:text-blue-300"
+                                        >
+                                            Apply Suggestion
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* AI Comments Panel */}
+                        <AICommentPanel comments={aiComments} />
+                    </div>
                 </div>
             </div>
 
@@ -298,4 +421,4 @@ const DocumentEditor = () => {
     );
 };
 
-export default DocumentEditor; 
+export default DocumentEditor;

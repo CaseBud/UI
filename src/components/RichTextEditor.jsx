@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 
-const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
+const RichTextEditor = forwardRef(({ content, onChange, onSelect, aiSuggestions }, ref) => {
     const editorRef = useRef(null);
     const [isEditorReady, setIsEditorReady] = useState(false);
     const [editorState, setEditorState] = useState({
@@ -10,6 +10,7 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
         heading: null, // h1, h2, h3, etc.
         list: null // ul, ol
     });
+    const [highlightedSuggestions, setHighlightedSuggestions] = useState([]);
 
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
@@ -24,7 +25,8 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
                 editorRef.current.innerHTML = html;
                 handleContentChange();
             }
-        }
+        },
+        applySuggestion
     }));
 
     useEffect(() => {
@@ -45,6 +47,13 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
         }
     }, [content, isEditorReady]);
 
+    // Highlight suggestions in real-time
+    useEffect(() => {
+        if (aiSuggestions && editorRef.current) {
+            highlightSuggestions(aiSuggestions);
+        }
+    }, [aiSuggestions]);
+
     const handleContentChange = () => {
         if (onChange && editorRef.current) {
             onChange(editorRef.current.innerHTML);
@@ -57,15 +66,16 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
             const range = selection.getRangeAt(0);
             const selectedText = selection.toString();
             
-            if (selectedText && onSelect) {
-                onSelect(selectedText, {
-                    start: getTextOffset(editorRef.current, range.startContainer, range.startOffset),
-                    end: getTextOffset(editorRef.current, range.endContainer, range.endOffset)
-                });
+            // Only trigger onSelect if selection is within editor
+            if (editorRef.current.contains(range.startContainer)) {
+                if (selectedText && onSelect) {
+                    onSelect(selectedText, {
+                        start: getTextOffset(editorRef.current, range.startContainer, range.startOffset),
+                        end: getTextOffset(editorRef.current, range.endContainer, range.endOffset),
+                        range: range.cloneRange() // Store actual range object
+                    });
+                }
             }
-            
-            // Update formatting state based on current selection
-            updateFormattingState();
         }
     };
 
@@ -140,6 +150,43 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
             default:
                 break;
         }
+    };
+
+    // Add new method to handle AI suggestions
+    const applySuggestion = (suggestionContent) => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            const span = document.createElement('span');
+            span.className = 'ai-suggestion';
+            span.style.backgroundColor = 'rgba(52, 211, 153, 0.2)'; // Light green background
+            span.innerHTML = suggestionContent;
+            
+            range.deleteContents();
+            range.insertNode(span);
+            handleContentChange();
+        }
+    };
+
+    const highlightSuggestions = (suggestions) => {
+        // Remove existing highlights
+        const existingHighlights = editorRef.current.querySelectorAll('.ai-highlight');
+        existingHighlights.forEach(el => {
+            const parent = el.parentNode;
+            parent.replaceChild(document.createTextNode(el.textContent), el);
+        });
+
+        // Add new highlights
+        suggestions.forEach(suggestion => {
+            if (!suggestion.applied) {
+                const content = editorRef.current.innerHTML;
+                const highlightedContent = content.replace(
+                    suggestion.content,
+                    `<span class="ai-highlight" style="background-color: rgba(59, 130, 246, 0.2);">${suggestion.content}</span>`
+                );
+                editorRef.current.innerHTML = highlightedContent;
+            }
+        });
     };
 
     return (
@@ -281,4 +328,4 @@ const RichTextEditor = forwardRef(({ content, onChange, onSelect }, ref) => {
     );
 });
 
-export default RichTextEditor; 
+export default RichTextEditor;
