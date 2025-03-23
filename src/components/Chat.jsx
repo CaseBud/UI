@@ -453,26 +453,32 @@ const Chat = () => {
     };
 
     const handleUploadComplete = (response) => {
-        if (isIncognito || !response?.data?.document) return;
-        
-        const document = response.data.document;
-        console.log('Uploaded document details:', {
-            id: document._id,
-            name: document.name,
-            type: document.type,
-            size: document.size
-        });
+        if (!response?.data?.document) {
+            console.error('Invalid response format:', response);
+            throw new Error('Invalid response format from server');
+        }
     
-        setUploadedDocuments((prev) => [...prev, document]);
-        setActiveDocuments((prev) => [...prev, document._id]);
-        setDocumentAnalysisId(response.conversationId || null);
+        const document = response.data.document;
+        console.log('Document data received:', document);
         
-        // Toggle document analysis mode
+        // Ensure we have a valid document ID
+        const documentId = document._id;
+        if (!documentId) {
+            console.error('Document data missing ID:', document);
+            throw new Error('Document ID missing from response');
+        }
+    
+        // Update state with new document
+        setUploadedDocuments(prev => [...prev, document]);
+        setActiveDocuments(prev => [...prev, documentId]);
+        
+        // Set document analysis mode
+        setDocumentAnalysisId(response.conversationId || null);
         setIsDocumentAnalysis(true);
         setIsWebMode(false);
-        
-        // Add system message about document upload
-        setMessages((prev) => [
+    
+        // Add upload success message
+        setMessages(prev => [
             ...prev,
             {
                 type: 'system',
@@ -484,9 +490,10 @@ const Chat = () => {
                 timestamp: new Date()
             }
         ]);
+    
+        console.log('Document upload completed. Active documents:', documentId);
     };
-
-    // Ensure document analysis chat sets conversationId to null when starting a new document chat
+    
     const handleDocumentAnalysis = async (query, documentIds) => {
         if (isIncognito) return; // Disable document analysis in incognito mode
 
@@ -568,7 +575,9 @@ const Chat = () => {
 
             let response;
 
+            // Check if we have active documents and are in document analysis mode
             if (isDocumentAnalysis && activeDocuments.length > 0) {
+                console.log('Sending document analysis with docs:', activeDocuments);
                 try {
                     response = await chatApi.sendDocumentAnalysis(
                         content.trim(),
@@ -576,20 +585,22 @@ const Chat = () => {
                         documentAnalysisId,
                         currentLanguage
                     );
-
-                    const assistantMessage = {
-                        type: 'assistant',
-                        content: {
-                            query: content,
-                            response: response.response
-                        },
-                        documents: response.documents || [],
-                        timestamp: new Date()
-                    };
-
-                    setDocumentAnalysisId(response.conversationId);
-                    setMessages((prev) => [...prev, assistantMessage]);
-                    await showResponseGradually(response.response);
+    
+                    if (response) {
+                        const assistantMessage = {
+                            type: 'assistant',
+                            content: {
+                                query: content,
+                                response: response.response
+                            },
+                            documents: response.documents || [],
+                            timestamp: new Date()
+                        };
+    
+                        setDocumentAnalysisId(response.conversationId);
+                        setMessages((prev) => [...prev, assistantMessage]);
+                        await showResponseGradually(response.response);
+                    }
                 } catch (docError) {
                     console.error('Document analysis error details:', docError);
                     setMessages((prev) => [
@@ -938,6 +949,74 @@ useEffect(() => {
         setIsToolsOpen(false); // Close tools dropdown
     };
 
+    // Handle document upload (regular upload)
+    const handleDocumentUpload = async (file) => {
+        try {
+            setMessages(prev => [...prev, {
+                type: 'system',
+                content: {
+                    response: translate('default.documentUploading', currentLanguage)
+                        .replace('{name}', file.name)
+                },
+                timestamp: new Date()
+            }]);
+
+            const response = await chatApi.sendDocument(file);
+            
+            if (!response.success) {
+                throw new Error('Upload failed');
+            }
+            
+            await handleUploadComplete(response);
+            
+        } catch (error) {
+            console.error('Upload failed:', error);
+            setMessages(prev => [...prev, {
+                type: 'error',
+                content: {
+                    response: translate('default.uploadError', currentLanguage)
+                        .replace('{error}', error.message)
+                },
+                timestamp: new Date()
+            }]);
+            
+            // Reset states on error
+            setIsDocumentAnalysis(false);
+            setDocumentAnalysisId(null);
+        }
+    };
+
+    // Add new OCR handler
+    const handleOCR = async (file) => {
+        try {
+            setMessages(prev => [...prev, {
+                type: 'system',
+                content: {
+                    response: translate('default.ocrProcessing', currentLanguage)
+                        .replace('{name}', file.name)
+                },
+                timestamp: new Date()
+            }]);
+
+            const result = await chatApi.performOCR(file);
+            
+            if (result.text) {
+                setMessage(result.text);
+                await sendMessage(result.text);
+            }
+        } catch (error) {
+            console.error('OCR failed:', error);
+            setMessages(prev => [...prev, {
+                type: 'error',
+                content: {
+                    response: translate('default.ocrError', currentLanguage)
+                        .replace('{error}', error.message)
+                },
+                timestamp: new Date()
+            }]);
+        }
+    };
+
     return (
         <div className={`flex h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
             {/* Hidden file input for document upload */}
@@ -945,56 +1024,28 @@ useEffect(() => {
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={async (event) => {
+                accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg"
+                onChange={(event) => {
                     const file = event.target.files?.[0];
                     if (!file) return;
-                    
-                    try {
-                        // Validate file size (10MB limit)
-                        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
-                        if (file.size > MAX_FILE_SIZE) {
-                            throw new Error('File size exceeds 10MB limit');
-                        }
 
-                        // Show loading state
-                        setMessages((prev) => [
-                            ...prev,
-                            {
-                                type: 'system',
-                                content: {
-                                    response: translate('default.documentUploading', currentLanguage)
-                                        .replace('{name}', file.name)
-                                },
-                                timestamp: new Date()
-                            }
-                        ]);
+                    // If it's an image, ask user if they want to use OCR
+                    if (file.type.startsWith('image/')) {
+                        const useOCR = window.confirm(
+                            translate('default.useOCR', currentLanguage) ||
+                            'Would you like to extract text from this image using OCR?'
+                        );
                         
-                        const response = await chatApi.sendDocument(file);
-                        
-                        // Check if we have valid document data
-                        if (response?.success && response?.data?.document?._id) {
-                            handleUploadComplete(response);
+                        if (useOCR) {
+                            handleOCR(file);
                         } else {
-                            throw new Error('Invalid document data received');
+                            handleDocumentUpload(file);
                         }
-                        
-                        event.target.value = ''; // Reset file input
-                    } catch (error) {
-                        console.error('Failed to upload document:', error);
-                        setMessages((prev) => [
-                            ...prev,
-                            {
-                                type: 'error',
-                                content: {
-                                    response: translate('default.uploadError', currentLanguage)
-                                        .replace('{error}', error.message || 'Upload failed')
-                                },
-                                timestamp: new Date()
-                            }
-                        ]);
-                        event.target.value = ''; // Reset file input on error
+                    } else {
+                        handleDocumentUpload(file);
                     }
+                    
+                    event.target.value = '';
                 }}
             />
 

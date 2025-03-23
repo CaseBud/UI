@@ -597,6 +597,18 @@ export const translations = {
         'yo-NG': 'Gbé Àkọsílẹ̀ Sókè',
         'ig-NG': 'Tinye Akwụkwọ',
         'ha-NG': 'Ɗora Takarda'
+    },
+    'default.ocrProcessing': {
+        'en-US': 'Extracting text from image "{name}"...',
+        // Add other languages as needed
+    },
+    'default.ocrError': {
+        'en-US': 'Failed to extract text: {error}',
+        // Add other languages as needed
+    },
+    'default.useOCR': {
+        'en-US': 'Would you like to extract text from this image using OCR?',
+        // Add other languages as needed
     }
 };
 
