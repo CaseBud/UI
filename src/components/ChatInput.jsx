@@ -22,7 +22,7 @@ const ChatInput = ({
     setIsWebMode,
     setDocumentAnalysisId,
     setIsDocumentAnalysis,
-    handleVoiceRecord, // Updated to match Chat.jsx
+    handleVoiceRecord,
     isRecording,
     transcribing,
 }) => {
@@ -104,7 +104,7 @@ const ChatInput = ({
                             {/* Voice Record Button */}
                             <button
                                 type="button"
-                                onClick={handleVoiceRecord} // Updated to handleVoiceRecord
+                                onClick={handleVoiceRecord}
                                 disabled={isTyping || transcribing || isTempUser}
                                 className={`p-1.5 rounded-lg transition-all duration-200 flex items-center justify-center
                                     ${
@@ -158,7 +158,7 @@ const ChatInput = ({
                                                     if (!isWebMode) {
                                                         setDocumentAnalysisId(null);
                                                         setIsDocumentAnalysis(false);
-                                                        setIsWebMode(true); // Set to true explicitly
+                                                        setIsWebMode(true);
                                                     } else {
                                                         setIsWebMode(false);
                                                     }
@@ -317,11 +317,10 @@ const ChatInput = ({
                                             <button
                                                 type="button"
                                                 onClick={() => {
-                                                    // Create a temporary input element for camera capture
                                                     const input = document.createElement('input');
                                                     input.type = 'file';
                                                     input.accept = 'image/*';
-                                                    input.capture = 'environment'; // Use rear camera
+                                                    input.capture = 'environment';
                                                     input.onchange = (e) => handleCameraCapture(e);
                                                     input.click();
                                                     setIsToolsOpen(false);
@@ -377,6 +376,10 @@ const ChatInput = ({
             </div>
         </div>
     );
+};
+
+ChatInput.defaultProps = {
+    isWebMode: true,
 };
 
 export default ChatInput;
