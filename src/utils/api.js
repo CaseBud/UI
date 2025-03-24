@@ -100,12 +100,15 @@ export const chatApi = {
         }
 
         try {
-            const endpoint = '/api/chat/standard-conversation';
-            const response = await fetchWithToken(endpoint, {
+            // Using the correct endpoint path
+            const response = await fetchWithToken('/api/chat/standard-conversation', {
                 method: 'POST',
                 body: JSON.stringify({
-                    query: message, // Change 'message' to 'query'
-                    conversationId
+                    query: message,
+                    conversationId,
+                    webSearch,
+                    language,
+                    detailedMode
                 })
             });
             
@@ -175,7 +178,25 @@ export const chatApi = {
         }
     },
 
-    getConversation: () => Promise.resolve({ messages: [] }),
+    getConversation: async (conversationId) => {
+        try {
+            const response = await fetchWithToken(`/api/chat/${conversationId}`);
+            
+            if (!response) {
+                throw new Error('No data received from server');
+            }
+            
+            return {
+                messages: response.messages || [],
+                title: response.title,
+                id: response._id || response.id
+            };
+            
+        } catch (error) {
+            console.error('Error in getConversation:', error);
+            throw error;
+        }
+    },
     deleteConversation: () => Promise.resolve(),
     updateConversationTitle: () => Promise.resolve(),
     uploadDocument: () => Promise.resolve({ id: Date.now() }),

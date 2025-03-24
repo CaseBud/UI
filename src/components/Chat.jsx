@@ -253,6 +253,7 @@ const Chat = () => {
     const [isTextToSpeechEnabled, setIsTextToSpeechEnabled] = useState(false);
     const [currentSpeakingMessage, setCurrentSpeakingMessage] = useState(null);
     const { isDark, lightModeBaseColor } = useTheme();
+    const [showReasoning, setShowReasoning] = useState(false);
 
     // Create a ref for the file input
     const fileInputRef = useRef(null);
@@ -652,24 +653,30 @@ const Chat = () => {
                 }
                 setDocumentAnalysisId(null);
                 setIsDocumentAnalysis(false);
+                // If in detailed mode, show reasoning first
+                if (isDetailedMode) {
+                    setShowReasoning(true);
+                    setMessages(prev => [...prev, {
+                        type: 'system',
+                        content: {
+                            response: translate('default.thinkingProcess', currentLanguage)
+                        },
+                        isReasoning: true,
+                        timestamp: new Date()
+                    }]);
+                }
+
                 response = await chatApi.sendMessage(content.trim(), {
-                    conversationId: currentconversationId
+                    conversationId: currentconversationId,
+                    webSearch: isWebMode, // Pass the webSearch flag
+                    language: currentLanguage,
+                    detailedMode: isDetailedMode
                 });
-                setCurrentconversationId(response.conversationId);
-                if (isWebMode) {
-                    setMessages((prev) => [
-                        ...prev,
-                        {
-                            type: 'system',
-                            content: {
-                                response: translate('default.searchingWeb', currentLanguage)
-                            },
-                            timestamp: new Date()
-                        }
-                    ]);
-                    // await showResponseGradually(
-                    //     messages[messages.length - 1].content.response
-                    // );
+
+                // Remove reasoning message if it exists
+                if (isDetailedMode) {
+                    setShowReasoning(false);
+                    setMessages(prev => prev.filter(m => !m.isReasoning));
                 }
 
                 const assistantMessage = {
@@ -691,6 +698,27 @@ const Chat = () => {
                 await showResponseGradually(
                     response.response || response.message
                 );
+
+                // Add references for web search results
+                if (isWebMode && response.references) {
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            type: 'system',
+                            content: {
+                                response: translate('default.references', currentLanguage)
+                            },
+                            timestamp: new Date()
+                        },
+                        ...response.references.map((ref, index) => ({
+                            type: 'reference',
+                            content: {
+                                response: `<a href="${ref.url}" target="_blank">${ref.title}</a>`
+                            },
+                            timestamp: new Date()
+                        }))
+                    ]);
+                }
             }
 
             localStorage.setItem('lastConversationId', response.conversationId);
@@ -1101,7 +1129,7 @@ useEffect(() => {
     };
 
     return (
-        <div className={`flex h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
+        <div className="flex h-screen bg-slate-900">
             {/* Hidden file input for document upload */}
             <input
                 ref={fileInputRef}
@@ -1132,33 +1160,52 @@ useEffect(() => {
                 }}
             />
 
-            {/* Sidebar */}
-            <Sidebar 
-                user={user} 
-                onSelectPrompt={handleSelectPrompt}
-                onDocumentUploadClick={handleDocumentUploadClick}
-            />
+            {/* Desktop Sidebar */}
+            <div className="hidden md:block">
+                <Sidebar 
+                    user={user} 
+                    onSelectPrompt={handleSelectPrompt}
+                    onDocumentUploadClick={handleDocumentUploadClick}
+                />
+            </div>
 
             <div className="flex-1 flex flex-col">
-                {/* For mobile view, insert MobileNav to the left of ChatHeader */}
-                <div className="md:hidden flex items-center">
-                    <MobileNav 
-                        user={user} 
-                        onSelectPrompt={handleSelectPrompt} 
-                        isTempUser={isTempUser} 
-                    />
+                {/* For mobile view, update header layout */}
+                <div className="md:hidden flex items-center border-b border-slate-700/50 bg-slate-800">
+                    {/* Hamburger Menu Button */}
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="p-4 text-slate-400 hover:text-white hover:bg-slate-700/50"
+                    >
+                        <svg 
+                            className="w-6 h-6" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                        >
+                            <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M4 6h16M4 12h16M4 18h16" 
+                            />
+                        </svg>
+                    </button>
                     <ChatHeader 
                         onDocumentUploadClick={handleDocumentUploadClick}
                         setIsHistoryOpen={setIsHistoryOpen}
                         isHistoryOpen={isHistoryOpen}
+                        isMobile={true}
                     />
                 </div>
+
                 {/* For desktop, use the original header */}
                 <div className="hidden md:block">
                     <ChatHeader 
                         onDocumentUploadClick={handleDocumentUploadClick}
                         setIsHistoryOpen={setIsHistoryOpen}
                         isHistoryOpen={isHistoryOpen}
+                        isMobile={false}
                     />
                 </div>
 
@@ -1205,31 +1252,68 @@ useEffect(() => {
                     </div>
                 </div>
 
-                <div className="hidden md:block">
-    <ChatInput 
-        message={message}
-        handleMessageChange={handleMessageChange}
-        handleSubmit={handleSubmit}
-        isTyping={isTyping}
-        isTempUser={isTempUser}
-        isWebMode={isWebMode}
-        isDetailedMode={isDetailedMode}
-        isToolsOpen={isToolsOpen}
-        setIsToolsOpen={setIsToolsOpen}
-        IconComponents={IconComponents}
-        handleDetailedModeToggle={handleDetailedModeToggle}
-        handleTextToSpeechToggle={handleTextToSpeechToggle}
-        isTextToSpeechEnabled={isTextToSpeechEnabled}
-        handleDocumentUploadClick={handleDocumentUploadClick}
-        setIsWebMode={setIsWebMode}
-        setDocumentAnalysisId={setDocumentAnalysisId}
-        setIsDocumentAnalysis={setIsDocumentAnalysis}
-        handleVoiceRecord={handleVoiceRecord} // Correct prop name
-        isRecording={isRecording}
-        transcribing={transcribing}
-        handleCameraCapture={handleCameraCapture} // Pass handleCameraCapture
-    />
-</div>
+                <div className="border-t border-slate-700/50">
+                    <div className="hidden md:block">
+                        <ChatInput 
+                            message={message}
+                            handleMessageChange={handleMessageChange}
+                            handleSubmit={handleSubmit}
+                            isTyping={isTyping}
+                            isTempUser={isTempUser}
+                            isWebMode={isWebMode}
+                            isDetailedMode={isDetailedMode}
+                            isToolsOpen={isToolsOpen}
+                            setIsToolsOpen={setIsToolsOpen}
+                            IconComponents={IconComponents}
+                            handleDetailedModeToggle={handleDetailedModeToggle}
+                            handleTextToSpeechToggle={handleTextToSpeechToggle}
+                            isTextToSpeechEnabled={isTextToSpeechEnabled}
+                            handleDocumentUploadClick={handleDocumentUploadClick}
+                            setIsWebMode={setIsWebMode}
+                            setDocumentAnalysisId={setDocumentAnalysisId}
+                            setIsDocumentAnalysis={setIsDocumentAnalysis}
+                            handleVoiceRecord={handleVoiceRecord} // Correct prop name
+                            isRecording={isRecording}
+                            transcribing={transcribing}
+                            handleCameraCapture={handleCameraCapture} // Pass handleCameraCapture
+                        />
+                    </div>
+                    <div className="md:hidden">
+                        <MobileInput 
+                            message={message}
+                            handleMessageChange={handleMessageChange}
+                            handleSubmit={handleSubmit}
+                            isTyping={isTyping}
+                            isTempUser={isTempUser}
+                            isWebMode={isWebMode}
+                            isDetailedMode={isDetailedMode}
+                            isToolsOpen={isToolsOpen}
+                            setIsToolsOpen={setIsToolsOpen}
+                            IconComponents={IconComponents}
+                            handleVoiceRecord={handleVoiceRecord} // Pass voice handler
+                            isRecording={isRecording} // Pass recording state
+                            transcribing={transcribing} // Pass transcribing state
+                        />
+                    </div>
+                </div>
+
+                <div className="md:hidden">
+                    <MobileBottomBar 
+                        handleNewChat={handleNewChat}
+                        isWebMode={isWebMode}
+                        setIsWebMode={setIsWebMode}
+                        setDocumentAnalysisId={setDocumentAnalysisId}
+                        setIsDocumentAnalysis={setIsDocumentAnalysis}
+                        setIsHistoryOpen={setIsHistoryOpen}
+                        isHistoryOpen={isHistoryOpen}
+                        language={currentLanguage}
+                        handleLanguageChange={() => {}}
+                        IconComponents={IconComponents}
+                        handleDocumentUploadClick={handleDocumentUploadClick}
+                        isDetailedMode={isDetailedMode}
+                        handleDetailedModeToggle={handleDetailedModeToggle}
+                    />
+                </div>
             </div>
 
             <div 
@@ -1243,7 +1327,7 @@ useEffect(() => {
                     onEditTitle={handleEditTitle}
                     onNewChat={handleNewChat}
                     isOpen={isHistoryOpen}
-                    currentconversationId={currentconversationId}
+                    currentConversationId={currentconversationId}
                     onClose={() => setIsHistoryOpen(false)}
                 />
             </div>
@@ -1252,47 +1336,9 @@ useEffect(() => {
                 user={user}
                 onSelectPrompt={handleSelectPrompt}
                 isTempUser={isTempUser}
-                isOpen={isMobileMenuOpen}
+                isOpen={isMobileMenuOpen} // Add this
                 onClose={() => setIsMobileMenuOpen(false)}
             />  
-
-            <div className={`md:hidden fixed bottom-0 left-0 right-0 z-40 ${
-                isDark ? 'bg-slate-800/95 backdrop-blur-sm' : 'bg-white'
-            } pb-safe`}>
-                <div className="border-t border-b border-gray-200 dark:border-slate-700/50">
-                    <MobileInput 
-                        message={message}
-                        handleMessageChange={handleMessageChange}
-                        handleSubmit={handleSubmit}
-                        isTyping={isTyping}
-                        isTempUser={isTempUser}
-                        isWebMode={isWebMode}
-                        isDetailedMode={isDetailedMode}
-                        isToolsOpen={isToolsOpen}
-                        setIsToolsOpen={setIsToolsOpen}
-                        IconComponents={IconComponents}
-                        handleVoiceRecord={handleVoiceRecord} // Pass voice handler
-                        isRecording={isRecording} // Pass recording state
-                        transcribing={transcribing} // Pass transcribing state
-                    />
-                </div>
-                
-                <MobileBottomBar 
-                    handleNewChat={handleNewChat}
-                    isWebMode={isWebMode}
-                    setIsWebMode={setIsWebMode}
-                    setDocumentAnalysisId={setDocumentAnalysisId}
-                    setIsDocumentAnalysis={setIsDocumentAnalysis}
-                    setIsHistoryOpen={setIsHistoryOpen}
-                    isHistoryOpen={isHistoryOpen}
-                    language={currentLanguage}
-                    handleLanguageChange={() => {}}
-                    IconComponents={IconComponents}
-                    handleDocumentUploadClick={handleDocumentUploadClick}
-                    isDetailedMode={isDetailedMode}
-                    handleDetailedModeToggle={handleDetailedModeToggle}
-                />
-            </div>
         </div>
     );
 };
