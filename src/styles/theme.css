@@ -1,0 +1,69 @@
+:root {
+    /* Light theme defaults */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+}
+
+.dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+}
+
+/* Transition for theme changes */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Base theme classes */
+.bg-theme-primary {
+    background-color: var(--bg-primary);
+}
+
+.bg-theme-secondary {
+    background-color: var(--bg-secondary);
+}
+
+.text-theme-primary {
+    color: var(--text-primary);
+}
+
+.text-theme-secondary {
+    color: var(--text-secondary);
+}
+
+.border-theme {
+    border-color: var(--text-secondary);
+}
+
+/* Formatted text styles */
+.formatted-text strong {
+  @apply font-semibold;
+}
+
+.formatted-text em {
+  @apply italic text-theme-secondary;
+}
+
+.formatted-text p {
+  @apply mb-4 leading-relaxed;
+}
+
+.formatted-text ol {
+  @apply space-y-4 my-4;
+}
+
+.formatted-text ul {
+  @apply space-y-2 my-4;
+}
+
+.formatted-text li {
+  @apply flex items-start;
+}
+
+.formatted-text .note {
+  @apply mt-4 text-sm text-theme-secondary italic;
+}

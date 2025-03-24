@@ -10,21 +10,42 @@ export default {
                     secondary: '#1e40af',
                     accent: '#3b82f6',
                     dark: {
-                        bg: '#0f172a',
-                        card: '#1e293b',
-                        text: '#f8fafc'
+                        bg: 'var(--bg-primary)',
+                        card: 'var(--bg-secondary)',
+                        text: 'var(--text-primary)',
+                        textSecondary: 'var(--text-secondary)'
                     },
                     light: {
-                        bg: '#ffffff',
-                        card: '#f1f5f9',
-                        text: '#0f172a'
+                        bg: 'var(--bg-primary)',
+                        card: 'var(--bg-secondary)',
+                        text: 'var(--text-primary)',
+                        textSecondary: 'var(--text-secondary)'
                     }
                 }
+            },
+            backgroundColor: {
+                primary: 'var(--bg-primary)',
+                secondary: 'var(--bg-secondary)'
+            },
+            textColor: {
+                primary: 'var(--text-primary)',
+                secondary: 'var(--text-secondary)'
+            },
+            borderColor: {
+                primary: 'var(--text-primary)',
+                secondary: 'var(--text-secondary)'
             },
             fontFamily: {
                 sans: ['Inter', 'sans-serif'],
                 heading: ['DM Sans', 'sans-serif']
             }
+        }
+    },
+    variants: {
+        extend: {
+            backgroundColor: ['dark', 'dark:hover'],
+            textColor: ['dark', 'dark:hover'],
+            borderColor: ['dark', 'dark:hover']
         }
     },
     plugins: []

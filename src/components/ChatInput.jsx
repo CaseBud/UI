@@ -10,7 +10,7 @@ const ChatInput = ({
     handleSubmit,
     isTyping,
     isTempUser,
-    isWebMode,
+    isWebMode = true, // default value moved here
     isDetailedMode,
     isToolsOpen,
     setIsToolsOpen,
@@ -376,10 +376,6 @@ const ChatInput = ({
             </div>
         </div>
     );
-};
-
-ChatInput.defaultProps = {
-    isWebMode: true,
 };
 
 export default ChatInput;

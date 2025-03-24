@@ -11,64 +11,68 @@ import DocumentEditor from './components/DocumentEditor';
 import DocumentList from './components/DocumentList';
 import VoiceToVoiceChat from './components/VoiceToVoiceChat';
 import './styles/formattedText.css';
- 
+import { ThemeProvider } from './contexts/ThemeContext';
+import './styles/theme.css';
 
 const App = () => {
-  
     return (
-        <BrowserRouter>
-            <Routes>
-                {/* Public Routes */}
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/verify-otp" element={<VerifyOTP />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+        <ThemeProvider>
+            <div className="bg-theme-primary text-theme-primary min-h-screen">
+                <BrowserRouter>
+                    <Routes>
+                        {/* Public Routes */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/verify-otp" element={<VerifyOTP />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
 
-                {/* Protected Routes */}
-                <Route
-                    path="/chat"
-                    element={
-                        <ProtectedRoute>
-                            <Chat />
-                        </ProtectedRoute>
-                    }
-                />
-                
-                {/* Document Editor Routes */}
-                <Route
-                    path="/document-editor"
-                    element={
-                        <ProtectedRoute>
-                            <DocumentEditor />
-                        </ProtectedRoute>
-                    }
-                />
-                
-                <Route
-                    path="/documents"
-                    element={
-                        <ProtectedRoute>
-                            <DocumentList />
-                        </ProtectedRoute>
-                    }
-                />
+                        {/* Protected Routes */}
+                        <Route
+                            path="/chat"
+                            element={
+                                <ProtectedRoute>
+                                    <Chat />
+                                </ProtectedRoute>
+                            }
+                        />
+                        
+                        {/* Document Editor Routes */}
+                        <Route
+                            path="/document-editor"
+                            element={
+                                <ProtectedRoute>
+                                    <DocumentEditor />
+                                </ProtectedRoute>
+                            }
+                        />
+                        
+                        <Route
+                            path="/documents"
+                            element={
+                                <ProtectedRoute>
+                                    <DocumentList />
+                                </ProtectedRoute>
+                            }
+                        />
 
-                {/* Voice to Voice Route */}
-                <Route
-                    path="/voice-to-voice"
-                    element={
-                        <ProtectedRoute>
-                            <VoiceToVoiceChat />
-                        </ProtectedRoute>
-                    }
-                />
+                        {/* Voice to Voice Route */}
+                        <Route
+                            path="/voice-to-voice"
+                            element={
+                                <ProtectedRoute>
+                                    <VoiceToVoiceChat />
+                                </ProtectedRoute>
+                            }
+                        />
 
-                {/* Default Route */}
-                <Route path="/" element={<Navigate to="/login" replace />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-        </BrowserRouter>
+                        {/* Default Route */}
+                        <Route path="/" element={<Navigate to="/login" replace />} />
+                        <Route path="*" element={<Navigate to="/login" replace />} />
+                    </Routes>
+                </BrowserRouter>
+            </div>
+        </ThemeProvider>
     );
 };
 

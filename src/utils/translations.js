@@ -657,6 +657,12 @@ export const translations = {
         'es-ES': 'Error al procesar la imagen: {error}',
         'fr-FR': 'Échec du traitement de l\'image: {error}',
         // Add other languages as needed
+    },
+    'default.thinkingProcess': {
+        'en-US': '🤔 Thinking through this carefully...\n\n1. Analyzing the context\n2. Gathering relevant information\n3. Formulating a detailed response',
+        'es-ES': '🤔 Pensando en esto cuidadosamente...',
+        'fr-FR': '🤔 Réfléchissant attentivement...',
+        // Add other language translations
     }
 };
 

@@ -18,6 +18,42 @@ import React from 'react';
 export const formatText = (text) => {
   if (!text) return null;
 
+  // Handle bold text (** or __)
+  text = text.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+  
+  // Handle italic text (* or _)
+  text = text.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
+  
+  // Handle numbered lists with titles
+  text = text.replace(
+    /(\d+)\.\s+\*\*(.*?)\*\*:\s+(.*?)(?=(?:\d+\.|$))/g, 
+    (_, number, title, content) => `
+      <div class="mb-4">
+        <div class="flex">
+          <span class="text-legal-accent font-medium mr-2">${number}.</span>
+          <div>
+            <span class="font-semibold">${title}:</span>
+            <span class="text-theme-secondary">${content.trim()}</span>
+          </div>
+        </div>
+      </div>
+    `
+  );
+
+  // Handle bullet points
+  text = text.replace(
+    /•\s+(.*?)(?=(?:•|$))/g,
+    '<div class="flex items-start mb-2"><span class="text-legal-accent mr-2">•</span><span>$1</span></div>'
+  );
+
+  // Handle paragraphs
+  text = text.replace(/\n\n/g, '</p><p class="mb-4">');
+  
+  // Wrap in paragraph if not already wrapped
+  if (!text.startsWith('<')) {
+    text = `<p class="mb-4">${text}</p>`;
+  }
+
   // Split the text into lines to handle block-level elements
   const lines = text.split('\n');
   const formattedLines = [];
@@ -336,4 +372,4 @@ const formatRichText = (text, keyPrefix = '') => {
   
   // Convert the HTML string back to React elements
   return <span key={keyPrefix} dangerouslySetInnerHTML={{ __html: text }} />;
-}; 
+};

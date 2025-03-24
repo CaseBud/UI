@@ -1,54 +1,53 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
-// Define the light mode base color
-const LIGHT_MODE_BASE_COLOR = '#CCDBDC';
-
 export const ThemeProvider = ({ children }) => {
-  // Check if theme preference exists in localStorage, otherwise use system preference
-  const getInitialTheme = () => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme;
-    }
-    // Check system preference
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  };
+    const [isDark, setIsDark] = useState(() => {
+        // Check localStorage first
+        const saved = localStorage.getItem('theme');
+        if (saved) {
+            return saved === 'dark';
+        }
+        // Then check system preference
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
 
-  const [theme, setTheme] = useState(getInitialTheme);
+    useEffect(() => {
+        // Update HTML class and localStorage
+        document.documentElement.classList.toggle('dark', isDark);
+        document.documentElement.classList.toggle('light', !isDark);
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // Set CSS variables for theme colors
+        if (isDark) {
+            document.documentElement.style.setProperty('--bg-primary', '#0f172a');
+            document.documentElement.style.setProperty('--bg-secondary', '#1e293b');
+            document.documentElement.style.setProperty('--text-primary', '#f8fafc');
+            document.documentElement.style.setProperty('--text-secondary', '#94a3b8');
+        } else {
+            document.documentElement.style.setProperty('--bg-primary', '#ffffff');
+            document.documentElement.style.setProperty('--bg-secondary', '#f1f5f9');
+            document.documentElement.style.setProperty('--text-primary', '#0f172a');
+            document.documentElement.style.setProperty('--text-secondary', '#475569');
+        }
+    }, [isDark]);
 
-  // Update theme in localStorage when it changes
-  useEffect(() => {
-    localStorage.setItem('theme', theme);
-    // Apply theme class to document
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+    const toggleTheme = () => {
+        setIsDark(prev => !prev);
+    };
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
-  };
-
-  return (
-    <ThemeContext.Provider value={{ 
-      theme, 
-      toggleTheme, 
-      isDark: theme === 'dark',
-      lightModeBaseColor: LIGHT_MODE_BASE_COLOR
-    }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+    return (
+        <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+            {children}
+        </ThemeContext.Provider>
+    );
 };
 
 export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-}; 
+    const context = useContext(ThemeContext);
+    if (!context) {
+        throw new Error('useTheme must be used within a ThemeProvider');
+    }
+    return context;
+};
