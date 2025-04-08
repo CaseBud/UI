@@ -1,5 +1,5 @@
 const BASE_URL =
-    'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/';
+    'https://case-bud-backend-1.onrender.com/';
 const TOKEN_REFRESH_URL =
     'https://case-bud-backend.onrender.com/api/auth/refresh';
 

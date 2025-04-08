@@ -1,7 +1,7 @@
 import { setAuthToken, checkToken, getAuthToken } from '../utils/auth';
 
 const BASE_URL =
-    'https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/';
+    'https://case-bud-backend-1.onrender.com/';
 
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 

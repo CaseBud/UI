@@ -279,7 +279,7 @@ const Chat = () => {
 
         try {
             await fetch(
-                `https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`,
+                `https://case-bud-backend-1.onrender.com/api/chat/${conversationId}`,
                 {
                     method: 'DELETE',
                     headers: {
@@ -304,7 +304,7 @@ const Chat = () => {
 
         try {
             await fetch(
-                `https://case-bud-backend-bzgqfka6daeracaj.centralus-01.azurewebsites.net/api/chat/${conversationId}`,
+                `https://case-bud-backend-1.onrender.com/api/chat/${conversationId}`,
                 {
                     method: 'PUT',
                     headers: {
